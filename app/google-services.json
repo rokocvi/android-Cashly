@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "735481921510",
+    "project_id": "spendsmart-c698f",
+    "storage_bucket": "spendsmart-c698f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:735481921510:android:1563fe53fa190fbd78e027",
+        "android_client_info": {
+          "package_name": "com.example.projektmobpravi"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyArEH82QdHYYj4DuWZfOr-NLK7UBmF893Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

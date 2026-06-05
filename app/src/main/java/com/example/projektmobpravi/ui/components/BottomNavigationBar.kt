@@ -1,0 +1,107 @@
+package com.example.projektmobpravi.ui.components
+
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.AddCircle
+import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.Wallet
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
+import com.example.projektmobpravi.ui.navigation.Screen
+import com.example.projektmobpravi.ui.theme.DeepGreen
+import com.example.projektmobpravi.ui.theme.SurfaceCard
+import com.example.projektmobpravi.ui.theme.TextMuted
+
+data class BottomNavItem(
+    val matchRoute: String,
+    val navigateRoute: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val label: String
+)
+
+val bottomNavItems = listOf(
+    BottomNavItem(
+        matchRoute = Screen.Home.route,
+        navigateRoute = Screen.Home.route,
+        selectedIcon = Icons.Filled.Home,
+        unselectedIcon = Icons.Outlined.Home,
+        label = "Početna"
+    ),
+    BottomNavItem(
+        matchRoute = Screen.Stats.route,
+        navigateRoute = Screen.Stats.route,
+        selectedIcon = Icons.Filled.BarChart,
+        unselectedIcon = Icons.Outlined.BarChart,
+        label = "Statistike"
+    ),
+    BottomNavItem(
+        matchRoute = Screen.AddTransaction.route,
+        navigateRoute = Screen.AddTransaction.addRoute,
+        selectedIcon = Icons.Filled.AddCircle,
+        unselectedIcon = Icons.Outlined.AddCircleOutline,
+        label = "Dodaj"
+    ),
+    BottomNavItem(
+        matchRoute = Screen.Budget.route,
+        navigateRoute = Screen.Budget.route,
+        selectedIcon = Icons.Filled.Wallet,
+        unselectedIcon = Icons.Outlined.Wallet,
+        label = "Budgeti"
+    )
+)
+
+@Composable
+fun BottomNavigationBar(navController: NavHostController) {
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    NavigationBar(
+        containerColor = SurfaceCard,
+        tonalElevation = 8.dp
+    ) {
+        bottomNavItems.forEach { item ->
+            val selected = currentRoute == item.matchRoute
+            NavigationBarItem(
+                selected = selected,
+                onClick = {
+                    if (currentRoute != item.matchRoute) {
+                        navController.navigate(item.navigateRoute) {
+                            popUpTo(Screen.Home.route) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                },
+                icon = {
+                    Icon(
+                        imageVector = if (selected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.label
+                    )
+                },
+                label = { Text(item.label, fontSize = 11.sp) },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = DeepGreen,
+                    selectedTextColor = DeepGreen,
+                    unselectedIconColor = TextMuted,
+                    unselectedTextColor = TextMuted,
+                    indicatorColor = DeepGreen.copy(alpha = 0.12f)
+                )
+            )
+        }
+    }
+}

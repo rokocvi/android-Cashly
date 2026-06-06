@@ -1,27 +1,34 @@
 package com.example.projektmobpravi.ui.home
 
 import android.content.Context
+import android.hardware.Sensor
 import android.hardware.SensorManager
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -34,16 +41,14 @@ import com.example.projektmobpravi.ui.theme.*
 import com.example.projektmobpravi.util.ShakeDetector
 import java.text.SimpleDateFormat
 import java.util.Date
-import android.hardware.Sensor
-import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Shake-to-scan
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sensorManager = remember { context.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
@@ -60,38 +65,36 @@ fun HomeScreen(navController: NavHostController) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { navController.navigate(Screen.AddTransaction.addRoute) },
-                containerColor = DeepGreen,
-                contentColor = TextOnDark,
-                shape = CircleShape,
-                modifier = Modifier.size(64.dp)
+                onClick          = { navController.navigate(Screen.AddTransaction.addRoute) },
+                containerColor   = DeepGreen,
+                contentColor     = TextOnDark,
+                shape            = RoundedCornerShape(16.dp),
+                modifier         = Modifier.size(56.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Add,
+                    imageVector        = Icons.Default.Add,
                     contentDescription = "Dodaj transakciju",
-                    modifier = Modifier.size(28.dp)
+                    modifier           = Modifier.size(24.dp)
                 )
             }
         },
-        bottomBar = {
-            BottomNavigationBar(navController = navController)
-        },
+        bottomBar      = { BottomNavigationBar(navController = navController) },
         containerColor = SurfaceLight
     ) { paddingValues ->
 
         if (uiState.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize(),
+                modifier        = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = DeepGreen)
+                CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
-                modifier = Modifier
+                modifier       = Modifier
                     .fillMaxSize()
                     .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
                 item {
                     HomeHeader(
@@ -105,37 +108,43 @@ fun HomeScreen(navController: NavHostController) {
                     )
                 }
 
-                item {
-                    TotalSpendingCard(total = uiState.totalThisMonth)
-                }
+                item { TotalSpendingCard(total = uiState.totalThisMonth) }
+
+                item { CategorySummaryRow(categoryTotals = uiState.categoryTotals) }
 
                 item {
-                    CategorySummaryRow(categoryTotals = uiState.categoryTotals)
-                }
-
-                item {
-                    Text(
-                        text = "Zadnje transakcije",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .padding(top = 8.dp, bottom = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text  = "Zadnje transakcije",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextDark
+                        )
+                        Text(
+                            text  = "${uiState.transactions.size} stavki",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextMuted
+                        )
+                    }
                 }
 
                 if (uiState.transactions.isEmpty()) {
-                    item {
-                        EmptyTransactionsCard()
-                    }
+                    item { EmptyTransactionsCard() }
                 } else {
                     items(
                         items = uiState.transactions,
-                        key = { it.id }
+                        key   = { it.id }
                     ) { transaction ->
                         TransactionItem(
                             transaction = transaction,
-                            onDelete = { viewModel.deleteTransaction(transaction) },
-                            onEdit = {
+                            onDelete    = { viewModel.deleteTransaction(transaction) },
+                            onEdit      = {
                                 navController.navigate(
                                     Screen.AddTransaction.editRoute(transaction.id)
                                 )
@@ -154,39 +163,95 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(DeepGreen, MintGreen)
+                brush = Brush.linearGradient(
+                    colors = listOf(DeepGreen, Color(0xFF025C46))
                 )
             )
-            .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // Suptilni dekorativni krugovi
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color  = Color.White.copy(alpha = 0.05f),
+                radius = 180.dp.toPx(),
+                center = Offset(size.width * 0.88f, -55.dp.toPx())
+            )
+            drawCircle(
+                color  = Color.White.copy(alpha = 0.04f),
+                radius = 110.dp.toPx(),
+                center = Offset(-35.dp.toPx(), size.height * 0.85f)
+            )
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(top = 24.dp, bottom = 24.dp)
         ) {
-            Column {
-                Text(
-                    text = "Dobar dan, $username! 👋",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextOnDark
-                )
-                Text(
-                    text = SimpleDateFormat(
-                        "d. MMMM yyyy.", Locale("hr")
-                    ).format(Date()),
-                    fontSize = 13.sp,
-                    color = TextOnDark.copy(alpha = 0.7f)
-                )
+            Row(
+                modifier              = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment     = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Avatar s inicijalima
+                    Box(
+                        modifier         = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text       = username.firstOrNull()?.uppercaseChar()?.toString() ?: "U",
+                            fontSize   = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = TextOnDark
+                        )
+                    }
+
+                    Column {
+                        Text(
+                            text  = "Dobar dan,",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextOnDark.copy(alpha = 0.65f)
+                        )
+                        Text(
+                            text  = username,
+                            style = MaterialTheme.typography.titleLarge,
+                            color = TextOnDark
+                        )
+                    }
+                }
+
+                // Logout gumb
+                Box(
+                    modifier         = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .clickable { onLogout() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = "Odjava",
+                        tint               = TextOnDark.copy(alpha = 0.9f),
+                        modifier           = Modifier.size(18.dp)
+                    )
+                }
             }
-            IconButton(onClick = onLogout) {
-                Icon(
-                    imageVector = Icons.Default.ExitToApp,
-                    contentDescription = "Odjava",
-                    tint = TextOnDark.copy(alpha = 0.8f)
-                )
-            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text  = SimpleDateFormat("EEEE, d. MMMM yyyy.", Locale("hr")).format(Date()),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextOnDark.copy(alpha = 0.55f)
+            )
         }
     }
 }
@@ -196,34 +261,64 @@ fun TotalSpendingCard(total: Double) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepGreen),
-        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        shape   = RoundedCornerShape(20.dp),
+        colors  = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
-            modifier = Modifier
+        Row(
+            modifier              = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
         ) {
-            Text(
-                text = "Potrošnja ovaj mjesec",
-                fontSize = 14.sp,
-                color = TextOnDark.copy(alpha = 0.7f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "€ %.2f".format(total),
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextOnDark
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "💡 Prati svaki trošak",
-                fontSize = 12.sp,
-                color = AccentGold
-            )
+            Column {
+                Text(
+                    text  = "Potrošnja ovaj mjesec",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextMuted
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text       = "€ %.2f".format(total),
+                    fontSize   = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    color      = TextDark
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(SuccessGreen)
+                    )
+                    Text(
+                        text  = "Aktivno praćenje",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            Box(
+                modifier         = Modifier
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(DeepGreen.copy(alpha = 0.07f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = Icons.Default.AccountBalanceWallet,
+                    contentDescription = null,
+                    tint               = DeepGreen,
+                    modifier           = Modifier.size(28.dp)
+                )
+            }
         }
     }
 }
@@ -236,22 +331,31 @@ fun CategorySummaryRow(categoryTotals: Map<String, Double>) {
 
     if (topCategories.isEmpty()) return
 
-    Row(
+    Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 16.dp)
     ) {
-        topCategories.forEach { (category, amount) ->
-            CategoryMiniCard(
-                category = category,
-                amount = amount,
-                modifier = Modifier.weight(1f)
-            )
+        Text(
+            text     = "Top kategorije",
+            style    = MaterialTheme.typography.titleMedium,
+            color    = TextDark,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        Row(
+            modifier              = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            topCategories.forEach { (category, amount) ->
+                CategoryMiniCard(
+                    category = category,
+                    amount   = amount,
+                    modifier = Modifier.weight(1f)
+                )
+            }
         }
+        Spacer(modifier = Modifier.height(8.dp))
     }
-
-    Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable
@@ -264,31 +368,39 @@ fun CategoryMiniCard(
     val color = getCategoryColor(category)
 
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.15f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        modifier  = modifier,
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier
+            modifier             = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(vertical = 14.dp, horizontal = 8.dp),
+            horizontalAlignment  = Alignment.CenterHorizontally
         ) {
-            Text(text = emoji, fontSize = 24.sp)
-            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier         = Modifier
+                    .size(42.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(color.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = emoji, fontSize = 20.sp)
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = "€%.0f".format(amount),
-                fontSize = 14.sp,
+                text       = "€%.0f".format(amount),
+                style      = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = TextDark
+                color      = TextDark
             )
             Text(
-                text = category,
-                fontSize = 11.sp,
-                color = TextMuted
+                text     = category,
+                style    = MaterialTheme.typography.labelSmall,
+                color    = TextMuted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }
@@ -305,9 +417,9 @@ fun TransactionItem(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Obriši transakciju") },
-            text = { Text("Jesi li siguran da želiš obrisati ovu transakciju?") },
-            confirmButton = {
+            title            = { Text("Obriši transakciju") },
+            text             = { Text("Jesi li siguran da želiš obrisati ovu transakciju?") },
+            confirmButton    = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteDialog = false
@@ -324,80 +436,103 @@ fun TransactionItem(
     }
 
     Card(
-        modifier = Modifier
+        modifier  = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Squircle ikona kategorije
             Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(getCategoryColor(transaction.category).copy(alpha = 0.15f)),
+                modifier         = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(getCategoryColor(transaction.category).copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = getCategoryEmoji(transaction.category),
-                    fontSize = 20.sp
+                    text     = getCategoryEmoji(transaction.category),
+                    fontSize = 22.sp
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
+            // Naziv i datum
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = transaction.note.ifBlank { transaction.category },
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextDark
+                    text     = transaction.note.ifBlank { transaction.category },
+                    style    = MaterialTheme.typography.titleMedium,
+                    color    = TextDark,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(getCategoryColor(transaction.category).copy(alpha = 0.10f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text  = transaction.category,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = getCategoryColor(transaction.category)
+                        )
+                    }
+                    Text(
+                        text  = "·",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                    Text(
+                        text  = SimpleDateFormat("d. MMM", Locale("hr"))
+                            .format(Date(transaction.date)),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextMuted
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Iznos i akcije
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = SimpleDateFormat("d. MMM yyyy.", Locale("hr"))
-                        .format(Date(transaction.date)),
-                    fontSize = 12.sp,
-                    color = TextMuted
+                    text  = "-€%.2f".format(transaction.amount),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = ErrorRed
                 )
-            }
-
-            Text(
-                text = "-€%.2f".format(transaction.amount),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = ErrorRed
-            )
-
-            Spacer(modifier = Modifier.width(4.dp))
-
-            IconButton(
-                onClick = onEdit,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Uredi",
-                    tint = TextMuted.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-
-            IconButton(
-                onClick = { showDeleteDialog = true },
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Obriši",
-                    tint = TextMuted.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp)
-                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(
+                        imageVector        = Icons.Default.Edit,
+                        contentDescription = "Uredi",
+                        tint               = TextMuted.copy(alpha = 0.45f),
+                        modifier           = Modifier
+                            .size(16.dp)
+                            .clickable { onEdit() }
+                    )
+                    Icon(
+                        imageVector        = Icons.Default.Delete,
+                        contentDescription = "Obriši",
+                        tint               = TextMuted.copy(alpha = 0.45f),
+                        modifier           = Modifier
+                            .size(16.dp)
+                            .clickable { showDeleteDialog = true }
+                    )
+                }
             }
         }
     }
@@ -405,56 +540,60 @@ fun TransactionItem(
 
 @Composable
 fun EmptyTransactionsCard() {
-    Card(
-        modifier = Modifier
+    Column(
+        modifier             = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard)
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(SurfaceCard)
+            .padding(vertical = 40.dp, horizontal = 24.dp),
+        horizontalAlignment  = Alignment.CenterHorizontally
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Box(
+            modifier         = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(DeepGreen.copy(alpha = 0.06f)),
+            contentAlignment = Alignment.Center
         ) {
-            Text(text = "💸", fontSize = 48.sp)
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = "Nema transakcija",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextDark
-            )
-            Text(
-                text = "Dodaj svoju prvu transakciju!",
-                fontSize = 13.sp,
-                color = TextMuted
-            )
+            Text(text = "💸", fontSize = 34.sp)
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text  = "Nema transakcija",
+            style = MaterialTheme.typography.titleMedium,
+            color = TextDark
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text      = "Dodaj svoju prvu transakciju\nklikom na gumb + ispod",
+            style     = MaterialTheme.typography.bodySmall,
+            color     = TextMuted,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
 fun getCategoryEmoji(category: String): String {
     return when (category) {
-        "Hrana" -> "🍔"
-        "Prijevoz" -> "🚗"
-        "Zabava" -> "🎬"
-        "Kuća" -> "🏠"
-        "Zdravlje" -> "💊"
+        "Hrana"      -> "🍔"
+        "Prijevoz"   -> "🚗"
+        "Zabava"     -> "🎬"
+        "Kuća"       -> "🏠"
+        "Zdravlje"   -> "💊"
         "Odijevanje" -> "👕"
-        else -> "📦"
+        else         -> "📦"
     }
 }
 
 fun getCategoryColor(category: String): Color {
     return when (category) {
-        "Hrana" -> CategoryFood
-        "Prijevoz" -> CategoryTransport
-        "Zabava" -> CategoryEntertainment
-        "Kuća" -> CategoryHousing
-        "Zdravlje" -> CategoryHealth
+        "Hrana"      -> CategoryFood
+        "Prijevoz"   -> CategoryTransport
+        "Zabava"     -> CategoryEntertainment
+        "Kuća"       -> CategoryHousing
+        "Zdravlje"   -> CategoryHealth
         "Odijevanje" -> CategoryClothing
-        else -> CategoryOther
+        else         -> CategoryOther
     }
 }

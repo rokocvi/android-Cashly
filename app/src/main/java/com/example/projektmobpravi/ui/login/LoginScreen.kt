@@ -8,8 +8,11 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -26,10 +29,10 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
@@ -52,39 +55,31 @@ fun LoginScreen(navController: NavHostController) {
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(DeepGreen, MintGreen)
+                brush = Brush.linearGradient(
+                    colors = listOf(DeepGreen, Color(0xFF025C46))
                 )
             )
     ) {
-        // Dekorativni krug gore lijevo
+        // Dekorativni krugovi
         Box(
             modifier = Modifier
-                .size(300.dp)
-                .offset(x = (-80).dp, y = (-80).dp)
+                .size(320.dp)
+                .offset(x = (-90).dp, y = (-90).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            AccentGold.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
+                        colors = listOf(AccentGold.copy(alpha = 0.12f), Color.Transparent)
                     ),
                     shape = RoundedCornerShape(50)
                 )
         )
-
-        // Dekorativni krug dolje desno
         Box(
             modifier = Modifier
-                .size(250.dp)
+                .size(260.dp)
                 .align(Alignment.BottomEnd)
-                .offset(x = 80.dp, y = 80.dp)
+                .offset(x = 90.dp, y = 90.dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            AccentGold.copy(alpha = 0.1f),
-                            Color.Transparent
-                        )
+                        colors = listOf(AccentGold.copy(alpha = 0.08f), Color.Transparent)
                     ),
                     shape = RoundedCornerShape(50)
                 )
@@ -97,216 +92,202 @@ fun LoginScreen(navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Header
             AnimatedVisibility(
                 visible = true,
                 enter = fadeIn() + slideInVertically(initialOffsetY = { -40 })
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CashlyLogo()
+                    Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        text = "💰",
-                        fontSize = 56.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "SpendSmart",
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
+                        text  = "Cashly",
+                        style = MaterialTheme.typography.headlineLarge,
                         color = TextOnDark
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Prati svoju potrošnju pametno",
-                        fontSize = 14.sp,
-                        color = TextOnDark.copy(alpha = 0.7f)
+                        text  = "Prati svoju potrošnju pametno",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextOnDark.copy(alpha = 0.65f)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            // Card s formom
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                modifier  = Modifier.fillMaxWidth(),
+                shape     = RoundedCornerShape(24.dp),
+                colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
+                    modifier            = Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Dobrodošli nazad",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        text  = "Dobrodošli nazad",
+                        style = MaterialTheme.typography.titleLarge,
                         color = TextDark
                     )
                     Text(
-                        text = "Prijavite se na svoj račun",
-                        fontSize = 13.sp,
+                        text  = "Prijavite se na svoj račun",
+                        style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Email field
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            viewModel.clearError()
+                        value         = email,
+                        onValueChange = { email = it; viewModel.clearError() },
+                        label         = { Text("Email") },
+                        leadingIcon   = {
+                            Icon(Icons.Default.Email, null, tint = MintGreen)
                         },
-                        label = { Text("Email") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier        = Modifier.fillMaxWidth(),
+                        shape           = RoundedCornerShape(12.dp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Password field
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Lozinka") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
+                        value         = password,
+                        onValueChange = { password = it; viewModel.clearError() },
+                        label         = { Text("Lozinka") },
+                        leadingIcon   = {
+                            Icon(Icons.Default.Lock, null, tint = MintGreen)
                         },
                         trailingIcon = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible)
-                                        Icons.Default.VisibilityOff
-                                    else
-                                        Icons.Default.Visibility,
+                                        Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
                                     tint = TextMuted
                                 )
                             }
                         },
                         visualTransformation = if (passwordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                            VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier        = Modifier.fillMaxWidth(),
+                        shape           = RoundedCornerShape(12.dp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Error poruka
                     uiState.errorMessage?.let { error ->
                         Text(
-                            text = error,
-                            color = ErrorRed,
-                            fontSize = 13.sp
+                            text  = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ErrorRed
                         )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Login gumb
                     Button(
-                        onClick = { viewModel.login(email, password) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DeepGreen
-                        ),
-                        enabled = !uiState.isLoading
+                        onClick  = { viewModel.login(email, password) },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                        enabled  = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = TextOnDark,
+                                modifier    = Modifier.size(20.dp),
+                                color       = TextOnDark,
                                 strokeWidth = 2.dp
                             )
                         } else {
                             Text(
-                                text = "Prijava",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text  = "Prijava",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = TextOnDark
                             )
                         }
                     }
 
-                    // Divider
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier          = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = TextMuted.copy(alpha = 0.3f)
-                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = TextMuted.copy(alpha = 0.25f))
                         Text(
-                            text = "  ili  ",
-                            color = TextMuted,
-                            fontSize = 13.sp
+                            text  = "  ili  ",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted
                         )
-                        HorizontalDivider(
-                            modifier = Modifier.weight(1f),
-                            color = TextMuted.copy(alpha = 0.3f)
-                        )
+                        HorizontalDivider(modifier = Modifier.weight(1f), color = TextMuted.copy(alpha = 0.25f))
                     }
 
-                    // Register gumb
                     OutlinedButton(
-                        onClick = {
-                            navController.navigate(Screen.Register.route)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = DeepGreen
-                        ),
-                        border = ButtonDefaults.outlinedButtonBorder.copy(
-                            width = 1.5.dp
-                        )
+                        onClick  = { navController.navigate(Screen.Register.route) },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = DeepGreen),
+                        border   = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp)
                     ) {
                         Text(
-                            text = "Nemaš račun? Registriraj se",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
+                            text  = "Nemaš račun? Registriraj se",
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CashlyLogo() {
+    Box(
+        modifier = Modifier
+            .size(88.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .border(
+                width = 1.5.dp,
+                color = Color.White.copy(alpha = 0.30f),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .background(Color.White.copy(alpha = 0.16f))
+    ) {
+        Icon(
+            imageVector        = Icons.Default.Savings,
+            contentDescription = null,
+            tint               = TextOnDark,
+            modifier           = Modifier
+                .size(50.dp)
+                .align(Alignment.Center)
+        )
+        // Jantarni badge s euro znakom
+        Box(
+            modifier         = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(AccentGold)
+                .align(Alignment.BottomEnd)
+                .offset(x = (-10).dp, y = (-10).dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text       = "€",
+                fontSize   = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color      = Color.White
+            )
         }
     }
 }

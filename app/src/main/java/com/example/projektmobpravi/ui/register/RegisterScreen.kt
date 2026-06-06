@@ -19,6 +19,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -57,12 +61,11 @@ fun RegisterScreen(navController: NavHostController) {
         modifier = Modifier
             .fillMaxSize()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(DeepGreen, MintGreen)
+                brush = Brush.linearGradient(
+                    colors = listOf(DeepGreen, Color(0xFF025C46))
                 )
             )
     ) {
-        // Dekorativni krug
         Box(
             modifier = Modifier
                 .size(300.dp)
@@ -70,10 +73,7 @@ fun RegisterScreen(navController: NavHostController) {
                 .offset(x = 80.dp, y = (-80).dp)
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            AccentGold.copy(alpha = 0.15f),
-                            Color.Transparent
-                        )
+                        colors = listOf(AccentGold.copy(alpha = 0.12f), Color.Transparent)
                     ),
                     shape = RoundedCornerShape(50)
                 )
@@ -88,257 +88,225 @@ fun RegisterScreen(navController: NavHostController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // Header
             AnimatedVisibility(
                 visible = true,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { -40 })
+                enter   = fadeIn() + slideInVertically(initialOffsetY = { -40 })
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CashlyLogo()
+                    Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        text = "👋",
-                        fontSize = 48.sp
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Kreiraj račun",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
+                        text  = "Kreiraj račun",
+                        style = MaterialTheme.typography.headlineMedium,
                         color = TextOnDark
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Počni pratiti svoju potrošnju",
-                        fontSize = 14.sp,
-                        color = TextOnDark.copy(alpha = 0.7f)
+                        text  = "Počni pratiti svoju potrošnju",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextOnDark.copy(alpha = 0.65f)
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Card s formom
             Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = SurfaceLight),
+                modifier  = Modifier.fillMaxWidth(),
+                shape     = RoundedCornerShape(24.dp),
+                colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
+                    modifier            = Modifier
                         .fillMaxWidth()
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text = "Novi račun",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        text  = "Novi račun",
+                        style = MaterialTheme.typography.titleLarge,
                         color = TextDark
                     )
                     Text(
-                        text = "Ispunite sve podatke za registraciju",
-                        fontSize = 13.sp,
+                        text  = "Ispunite sve podatke za registraciju",
+                        style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Username field
                     OutlinedTextField(
-                        value = username,
-                        onValueChange = {
-                            username = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Korisničko ime") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Person,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                        value         = username,
+                        onValueChange = { username = it; viewModel.clearError() },
+                        label         = { Text("Korisničko ime") },
+                        leadingIcon   = { Icon(Icons.Default.Person, null, tint = MintGreen) },
+                        modifier      = Modifier.fillMaxWidth(),
+                        shape         = RoundedCornerShape(12.dp),
+                        colors        = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Email field
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Email") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Email,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                        value           = email,
+                        onValueChange   = { email = it; viewModel.clearError() },
+                        label           = { Text("Email") },
+                        leadingIcon     = { Icon(Icons.Default.Email, null, tint = MintGreen) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier        = Modifier.fillMaxWidth(),
+                        shape           = RoundedCornerShape(12.dp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Password field
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Lozinka") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
-                        },
-                        trailingIcon = {
+                        value         = password,
+                        onValueChange = { password = it; viewModel.clearError() },
+                        label         = { Text("Lozinka") },
+                        leadingIcon   = { Icon(Icons.Default.Lock, null, tint = MintGreen) },
+                        trailingIcon  = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                                 Icon(
                                     imageVector = if (passwordVisible)
-                                        Icons.Default.VisibilityOff
-                                    else
-                                        Icons.Default.Visibility,
+                                        Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
                                     tint = TextMuted
                                 )
                             }
                         },
                         visualTransformation = if (passwordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                            VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier        = Modifier.fillMaxWidth(),
+                        shape           = RoundedCornerShape(12.dp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Confirm Password field
                     OutlinedTextField(
-                        value = confirmPassword,
-                        onValueChange = {
-                            confirmPassword = it
-                            viewModel.clearError()
-                        },
-                        label = { Text("Potvrdi lozinku") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Lock,
-                                contentDescription = null,
-                                tint = MintGreen
-                            )
-                        },
-                        trailingIcon = {
+                        value         = confirmPassword,
+                        onValueChange = { confirmPassword = it; viewModel.clearError() },
+                        label         = { Text("Potvrdi lozinku") },
+                        leadingIcon   = { Icon(Icons.Default.Lock, null, tint = MintGreen) },
+                        trailingIcon  = {
                             IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                                 Icon(
                                     imageVector = if (confirmPasswordVisible)
-                                        Icons.Default.VisibilityOff
-                                    else
-                                        Icons.Default.Visibility,
+                                        Icons.Default.VisibilityOff else Icons.Default.Visibility,
                                     contentDescription = null,
                                     tint = TextMuted
                                 )
                             }
                         },
                         visualTransformation = if (confirmPasswordVisible)
-                            VisualTransformation.None
-                        else
-                            PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password
-                        ),
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MintGreen,
+                            VisualTransformation.None else PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier        = Modifier.fillMaxWidth(),
+                        shape           = RoundedCornerShape(12.dp),
+                        colors          = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor   = MintGreen,
                             unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                            focusedLabelColor = MintGreen
+                            focusedLabelColor    = MintGreen
                         ),
                         singleLine = true
                     )
 
-                    // Error poruka
                     uiState.errorMessage?.let { error ->
                         Text(
-                            text = error,
-                            color = ErrorRed,
-                            fontSize = 13.sp
+                            text  = error,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = ErrorRed
                         )
                     }
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Register gumb
                     Button(
-                        onClick = {
-                            viewModel.register(username, email, password, confirmPassword)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = DeepGreen
-                        ),
-                        enabled = !uiState.isLoading
+                        onClick  = { viewModel.register(username, email, password, confirmPassword) },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape    = RoundedCornerShape(12.dp),
+                        colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                        enabled  = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = TextOnDark,
+                                modifier    = Modifier.size(20.dp),
+                                color       = TextOnDark,
                                 strokeWidth = 2.dp
                             )
                         } else {
                             Text(
-                                text = "Registracija",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                text  = "Registracija",
+                                style = MaterialTheme.typography.titleMedium,
                                 color = TextOnDark
                             )
                         }
                     }
 
-                    // Nazad na login
                     TextButton(
-                        onClick = { navController.popBackStack() },
+                        onClick  = { navController.popBackStack() },
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text = "Već imaš račun? Prijavi se",
-                            color = DeepGreen,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
+                            text  = "Već imaš račun? Prijavi se",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = DeepGreen
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun CashlyLogo() {
+    Box(
+        modifier = Modifier
+            .size(88.dp)
+            .clip(RoundedCornerShape(28.dp))
+            .border(
+                width = 1.5.dp,
+                color = Color.White.copy(alpha = 0.30f),
+                shape = RoundedCornerShape(28.dp)
+            )
+            .background(Color.White.copy(alpha = 0.16f))
+    ) {
+        Icon(
+            imageVector        = Icons.Default.Savings,
+            contentDescription = null,
+            tint               = TextOnDark,
+            modifier           = Modifier
+                .size(50.dp)
+                .align(Alignment.Center)
+        )
+        Box(
+            modifier         = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(AccentGold)
+                .align(Alignment.BottomEnd)
+                .offset(x = (-10).dp, y = (-10).dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text       = "€",
+                fontSize   = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color      = Color.White
+            )
         }
     }
 }

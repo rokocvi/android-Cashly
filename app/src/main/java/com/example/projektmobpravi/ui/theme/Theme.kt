@@ -5,16 +5,21 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 
 private val ColorScheme = lightColorScheme(
-    primary = DeepGreen,
-    secondary = MintGreen,
-    tertiary = AccentGold,
-    background = SurfaceLight,
-    surface = SurfaceCard,
-    error = ErrorRed,
-    onPrimary = TextOnDark,
-    onSecondary = TextOnDark,
-    onBackground = TextDark,
-    onSurface = TextDark
+    primary            = DeepGreen,
+    onPrimary          = TextOnDark,
+    primaryContainer   = PrimaryContainer,
+    onPrimaryContainer = DeepGreen,
+    secondary          = MintGreen,
+    onSecondary        = TextOnDark,
+    tertiary           = AccentGold,
+    onTertiary         = TextOnDark,
+    background         = SurfaceLight,
+    onBackground       = TextDark,
+    surface            = SurfaceCard,
+    onSurface          = TextDark,
+    onSurfaceVariant   = TextMuted,
+    error              = ErrorRed,
+    onError            = TextOnDark,
 )
 
 @Composable
@@ -23,7 +28,7 @@ fun PROJEKTMOBPRAVITheme(
 ) {
     MaterialTheme(
         colorScheme = ColorScheme,
-        typography = Typography,
-        content = content
+        typography  = Typography,
+        content     = content
     )
 }

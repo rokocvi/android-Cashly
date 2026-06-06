@@ -1,6 +1,8 @@
 package com.example.projektmobpravi.ui.stats
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -8,18 +10,24 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
@@ -27,7 +35,6 @@ import com.example.projektmobpravi.ui.components.BottomNavigationBar
 import com.example.projektmobpravi.ui.home.getCategoryColor
 import com.example.projektmobpravi.ui.home.getCategoryEmoji
 import com.example.projektmobpravi.ui.theme.*
-import androidx.compose.ui.viewinterop.AndroidView
 import com.github.mikephil.charting.charts.BarChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
@@ -49,103 +56,58 @@ fun StatsScreen(navController: NavHostController) {
     }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController = navController) },
+        bottomBar      = { BottomNavigationBar(navController = navController) },
         containerColor = SurfaceLight,
-        snackbarHost = {}
+        snackbarHost   = {}
     ) { paddingValues ->
 
-        if (uiState.exportSuccess) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .padding(top = paddingValues.calculateTopPadding()),
-                contentAlignment = Alignment.Center
-            ) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = DeepGreen.copy(alpha = 0.1f)),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        text = "Exportano u Downloads!",
-                        color = DeepGreen,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(12.dp)
-                    )
-                }
-            }
-        }
-
         if (uiState.isLoading) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = DeepGreen)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 16.dp)
+                modifier       = Modifier.fillMaxSize().padding(paddingValues),
+                contentPadding = PaddingValues(bottom = 24.dp)
             ) {
-                // Header
                 item {
-                    StatsHeader(onExportClick = { viewModel.exportTransactions(context) })
+                    StatsHeader(
+                        onExportClick  = { viewModel.exportTransactions(context) },
+                        exportSuccess  = uiState.exportSuccess
+                    )
                 }
-
-                // Period selector
                 item {
                     PeriodSelector(
-                        selectedPeriod = uiState.selectedPeriod,
+                        selectedPeriod   = uiState.selectedPeriod,
                         onPeriodSelected = { viewModel.selectPeriod(it) }
                     )
                 }
-
-                // Filter po kategoriji
                 item {
                     CategoryFilter(
-                        categories = uiState.allCategories,
-                        selectedCategory = uiState.selectedCategory,
+                        categories         = uiState.allCategories,
+                        selectedCategory   = uiState.selectedCategory,
                         onCategorySelected = { viewModel.selectCategory(it) }
                     )
                 }
-
-                // Summary kartice
-                item {
-                    StatsSummaryRow(uiState = uiState)
-                }
-
-                // Kategorije
+                item { StatsSummaryRow(uiState = uiState) }
                 item {
                     Text(
-                        text = "Potrošnja po kategorijama",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark,
+                        text     = "Potrošnja po kategorijama",
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = TextDark,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                     )
                 }
-
-                item {
-                    CategoryStatsCard(categoryStats = uiState.categoryStats)
-                }
-
-                // Dnevni graf
+                item { CategoryStatsCard(categoryStats = uiState.categoryStats) }
                 item {
                     Text(
-                        text = "Zadnjih 7 dana",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextDark,
+                        text     = "Zadnjih 7 dana",
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = TextDark,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
                     )
                 }
-
-                item {
-                    DailyStatsCard(dailyStats = uiState.dailyStats)
-                }
+                item { DailyStatsCard(dailyStats = uiState.dailyStats) }
             }
         }
     }
@@ -154,37 +116,73 @@ fun StatsScreen(navController: NavHostController) {
 // ── Header ────────────────────────────────────────────
 
 @Composable
-fun StatsHeader(onExportClick: () -> Unit) {
+fun StatsHeader(onExportClick: () -> Unit, exportSuccess: Boolean = false) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(DeepGreen, MintGreen)
+                brush = Brush.linearGradient(
+                    colors = listOf(DeepGreen, Color(0xFF025C46))
                 )
             )
-            .padding(horizontal = 20.dp, vertical = 24.dp)
     ) {
-        Column {
-            Text(
-                text = "Statistike 📊",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextOnDark
+        Canvas(modifier = Modifier.matchParentSize()) {
+            drawCircle(
+                color  = Color.White.copy(alpha = 0.05f),
+                radius = 160.dp.toPx(),
+                center = Offset(size.width * 0.85f, -50.dp.toPx())
             )
-            Text(
-                text = "Pregled tvoje potrošnje",
-                fontSize = 13.sp,
-                color = TextOnDark.copy(alpha = 0.7f)
+            drawCircle(
+                color  = Color.White.copy(alpha = 0.04f),
+                radius = 100.dp.toPx(),
+                center = Offset(-30.dp.toPx(), size.height * 0.8f)
             )
         }
-        OutlinedButton(
-            onClick = onExportClick,
-            modifier = Modifier.align(Alignment.CenterEnd),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = TextOnDark),
-            border = BorderStroke(1.dp, TextOnDark.copy(alpha = 0.5f))
+
+        Row(
+            modifier              = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 24.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment     = Alignment.CenterVertically
         ) {
-            Text(text = "Export CSV", fontSize = 12.sp)
+            Column {
+                Text(
+                    text  = "Statistike",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = TextOnDark
+                )
+                Text(
+                    text  = if (exportSuccess) "✓ Exportano u Downloads" else "Pregled tvoje potrošnje",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (exportSuccess) AccentGold else TextOnDark.copy(alpha = 0.65f)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.White.copy(alpha = 0.14f))
+                    .clickable { onExportClick() }
+                    .padding(horizontal = 14.dp, vertical = 9.dp)
+            ) {
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.Download,
+                        contentDescription = null,
+                        tint               = TextOnDark,
+                        modifier           = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text  = "CSV",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = TextOnDark
+                    )
+                }
+            }
         }
     }
 }
@@ -197,9 +195,9 @@ fun PeriodSelector(
     onPeriodSelected: (Period) -> Unit
 ) {
     Row(
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Period.values().forEach { period ->
@@ -209,15 +207,20 @@ fun PeriodSelector(
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(if (isSelected) DeepGreen else SurfaceCard)
+                    .border(
+                        width = if (isSelected) 0.dp else 1.dp,
+                        color = TextMuted.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
                     .clickable { onPeriodSelected(period) }
                     .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = period.displayName,
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) TextOnDark else TextMuted
+                    text       = period.displayName,
+                    style      = MaterialTheme.typography.labelMedium,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                    color      = if (isSelected) TextOnDark else TextMuted
                 )
             }
         }
@@ -235,27 +238,31 @@ fun CategoryFilter(
     if (categories.isEmpty()) return
 
     Row(
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // "Sve" chip
         val allSelected = selectedCategory == null
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(20.dp))
                 .background(if (allSelected) DeepGreen else SurfaceCard)
+                .border(
+                    width = if (allSelected) 0.dp else 1.dp,
+                    color = TextMuted.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(20.dp)
+                )
                 .clickable { onCategorySelected(null) }
                 .padding(horizontal = 14.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "Sve",
-                fontSize = 12.sp,
-                fontWeight = if (allSelected) FontWeight.Bold else FontWeight.Normal,
-                color = if (allSelected) TextOnDark else TextMuted
+                text       = "Sve",
+                style      = MaterialTheme.typography.labelMedium,
+                fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color      = if (allSelected) TextOnDark else TextMuted
             )
         }
 
@@ -265,20 +272,25 @@ fun CategoryFilter(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(if (isSelected) DeepGreen else SurfaceCard)
+                    .border(
+                        width = if (isSelected) 0.dp else 1.dp,
+                        color = TextMuted.copy(alpha = 0.18f),
+                        shape = RoundedCornerShape(20.dp)
+                    )
                     .clickable { onCategorySelected(if (isSelected) null else category) }
                     .padding(horizontal = 14.dp, vertical = 8.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Text(text = getCategoryEmoji(category), fontSize = 12.sp)
+                    Text(text = getCategoryEmoji(category), style = MaterialTheme.typography.labelSmall)
                     Text(
-                        text = category,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isSelected) TextOnDark else TextMuted
+                        text       = category,
+                        style      = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color      = if (isSelected) TextOnDark else TextMuted
                     )
                 }
             }
@@ -291,75 +303,80 @@ fun CategoryFilter(
 @Composable
 fun StatsSummaryRow(uiState: StatsUiState) {
     Row(
-        modifier = Modifier
+        modifier              = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Ukupno
         SummaryCard(
             modifier = Modifier.weight(1f),
-            emoji = "💰",
-            label = "Ukupno",
-            value = "€%.2f".format(uiState.totalThisMonth),
-            color = DeepGreen
+            icon     = Icons.Default.AccountBalanceWallet,
+            label    = "Ukupno",
+            value    = "€%.2f".format(uiState.totalThisMonth),
+            color    = DeepGreen
         )
-
-        // Prosjek po danu
         SummaryCard(
             modifier = Modifier.weight(1f),
-            emoji = "📅",
-            label = "Dnevno",
-            value = "€%.2f".format(uiState.averagePerDay),
-            color = MintGreen
+            icon     = Icons.Default.CalendarToday,
+            label    = "Dnevno",
+            value    = "€%.2f".format(uiState.averagePerDay),
+            color    = MintGreen
         )
-
-        // Prošli mjesec
         SummaryCard(
             modifier = Modifier.weight(1f),
-            emoji = "📈",
-            label = "Prošli mj.",
-            value = "€%.2f".format(uiState.totalLastMonth),
-            color = AccentGold
+            icon     = Icons.Default.TrendingUp,
+            label    = "Prošli mj.",
+            value    = "€%.2f".format(uiState.totalLastMonth),
+            color    = AccentGold
         )
     }
-
     Spacer(modifier = Modifier.height(8.dp))
 }
 
 @Composable
 fun SummaryCard(
     modifier: Modifier = Modifier,
-    emoji: String,
+    icon: ImageVector,
     label: String,
     value: String,
     color: Color
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.1f)
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        modifier  = modifier,
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier
+            modifier            = Modifier
                 .fillMaxWidth()
                 .padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(text = emoji, fontSize = 20.sp)
-            Spacer(modifier = Modifier.height(4.dp))
+            Box(
+                modifier         = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(color.copy(alpha = 0.10f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = icon,
+                    contentDescription = null,
+                    tint               = color,
+                    modifier           = Modifier.size(18.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = value,
-                fontSize = 13.sp,
+                text       = value,
+                style      = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
-                color = color
+                color      = color
             )
             Text(
-                text = label,
-                fontSize = 10.sp,
+                text  = label,
+                style = MaterialTheme.typography.labelSmall,
                 color = TextMuted
             )
         }
@@ -371,28 +388,25 @@ fun SummaryCard(
 @Composable
 fun CategoryStatsCard(categoryStats: List<CategoryStat>) {
     Card(
-        modifier = Modifier
+        modifier  = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+            .padding(horizontal = 16.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier = Modifier
+            modifier            = Modifier
                 .fillMaxWidth()
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (categoryStats.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
+                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "Nema podataka za ovaj period",
-                        color = TextMuted,
-                        fontSize = 14.sp
+                        text  = "Nema podataka za ovaj period",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
                     )
                 }
             } else {
@@ -408,57 +422,52 @@ fun CategoryStatsCard(categoryStats: List<CategoryStat>) {
 fun CategoryStatRow(stat: CategoryStat) {
     val color = getCategoryColor(stat.category)
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier              = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment     = Alignment.CenterVertically
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(color.copy(alpha = 0.15f)),
+                    modifier         = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(color.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = getCategoryEmoji(stat.category),
-                        fontSize = 16.sp
-                    )
+                    Text(text = getCategoryEmoji(stat.category), style = MaterialTheme.typography.bodyMedium)
                 }
                 Text(
-                    text = stat.category,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
+                    text  = stat.category,
+                    style = MaterialTheme.typography.bodyMedium,
                     color = TextDark
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = "€%.2f".format(stat.amount),
-                    fontSize = 14.sp,
+                    text       = "€%.2f".format(stat.amount),
+                    style      = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
-                    color = TextDark
+                    color      = TextDark
                 )
                 Text(
-                    text = "%.1f%%".format(stat.percentage),
-                    fontSize = 11.sp,
+                    text  = "%.1f%%".format(stat.percentage),
+                    style = MaterialTheme.typography.labelSmall,
                     color = TextMuted
                 )
             }
         }
 
-        // Progress bar
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
                 .clip(RoundedCornerShape(3.dp))
-                .background(color.copy(alpha = 0.1f))
+                .background(color.copy(alpha = 0.10f))
         ) {
             Box(
                 modifier = Modifier
@@ -473,15 +482,14 @@ fun CategoryStatRow(stat: CategoryStat) {
 
 // ── Dnevni Graf ───────────────────────────────────────
 
-
 @Composable
 fun DailyStatsCard(dailyStats: List<DailyStat>) {
     Card(
-        modifier = Modifier
+        modifier  = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+            .padding(horizontal = 16.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
@@ -491,92 +499,71 @@ fun DailyStatsCard(dailyStats: List<DailyStat>) {
         ) {
             if (dailyStats.isEmpty()) {
                 Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
+                    modifier         = Modifier.fillMaxWidth().padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Nema podataka za ovaj period",
-                        color = TextMuted,
-                        fontSize = 14.sp
+                        text  = "Nema podataka za ovaj period",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = TextMuted
                     )
                 }
             } else {
                 AndroidView(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp),
-                    factory = { context ->
+                    modifier = Modifier.fillMaxWidth().height(200.dp),
+                    factory  = { context ->
                         BarChart(context).apply {
-                            // Osnovne postavke
-                            description.isEnabled = false
-                            legend.isEnabled = false
+                            description.isEnabled  = false
+                            legend.isEnabled       = false
                             setTouchEnabled(false)
                             setDrawGridBackground(false)
                             setDrawBorders(false)
-                            animateY(800)
+                            animateY(600)
 
-                            // X os
                             xAxis.apply {
-                                position = XAxis.XAxisPosition.BOTTOM
+                                position          = XAxis.XAxisPosition.BOTTOM
                                 setDrawGridLines(false)
                                 setDrawAxisLine(false)
-                                granularity = 1f
-                                textColor = android.graphics.Color.parseColor("#6B7280")
-                                textSize = 10f
+                                granularity       = 1f
+                                textColor         = android.graphics.Color.parseColor("#667085")
+                                textSize          = 10f
                             }
-
-                            // Lijeva Y os
                             axisLeft.apply {
                                 setDrawGridLines(true)
-                                gridColor = android.graphics.Color.parseColor("#F0F0F0")
+                                gridColor         = android.graphics.Color.parseColor("#F1F5F9")
                                 setDrawAxisLine(false)
-                                textColor = android.graphics.Color.parseColor("#6B7280")
-                                textSize = 10f
-                                valueFormatter = object : ValueFormatter() {
-                                    override fun getFormattedValue(value: Float): String {
-                                        return "€${value.toInt()}"
-                                    }
+                                textColor         = android.graphics.Color.parseColor("#667085")
+                                textSize          = 10f
+                                valueFormatter    = object : ValueFormatter() {
+                                    override fun getFormattedValue(value: Float) = "€${value.toInt()}"
                                 }
                             }
-
-                            // Desna Y os — sakrij
                             axisRight.isEnabled = false
                         }
                     },
                     update = { chart ->
-                        val entries = dailyStats.mapIndexed { index, stat ->
-                            BarEntry(index.toFloat(), stat.amount.toFloat())
+                        val entries = dailyStats.mapIndexed { i, stat ->
+                            BarEntry(i.toFloat(), stat.amount.toFloat())
                         }
-
                         val dataSet = BarDataSet(entries, "").apply {
                             colors = listOf(
-                                android.graphics.Color.parseColor("#2D6A4F"),
-                                android.graphics.Color.parseColor("#1A3C34"),
-                                android.graphics.Color.parseColor("#D4A853"),
-                                android.graphics.Color.parseColor("#2D6A4F"),
-                                android.graphics.Color.parseColor("#1A3C34"),
-                                android.graphics.Color.parseColor("#D4A853"),
-                                android.graphics.Color.parseColor("#2D6A4F")
+                                android.graphics.Color.parseColor("#027A48"),
+                                android.graphics.Color.parseColor("#014737"),
+                                android.graphics.Color.parseColor("#F79009"),
+                                android.graphics.Color.parseColor("#027A48"),
+                                android.graphics.Color.parseColor("#014737"),
+                                android.graphics.Color.parseColor("#F79009"),
+                                android.graphics.Color.parseColor("#027A48")
                             )
-                            valueTextColor = android.graphics.Color.parseColor("#1A1A1A")
-                            valueTextSize = 9f
+                            valueTextColor = android.graphics.Color.parseColor("#101828")
+                            valueTextSize  = 9f
                             valueFormatter = object : ValueFormatter() {
-                                override fun getFormattedValue(value: Float): String {
-                                    return "€${value.toInt()}"
-                                }
+                                override fun getFormattedValue(value: Float) =
+                                    if (value > 0) "€${value.toInt()}" else ""
                             }
                         }
-
-                        // X os labele
-                        chart.xAxis.valueFormatter = IndexAxisValueFormatter(
-                            dailyStats.map { it.day }
-                        )
-
-                        chart.data = BarData(dataSet).apply {
-                            barWidth = 0.6f
-                        }
+                        chart.xAxis.valueFormatter = IndexAxisValueFormatter(dailyStats.map { it.day })
+                        chart.data = BarData(dataSet).apply { barWidth = 0.6f }
                         chart.invalidate()
                     }
                 )

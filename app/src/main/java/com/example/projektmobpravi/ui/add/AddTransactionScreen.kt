@@ -1,5 +1,6 @@
 package com.example.projektmobpravi.ui.add
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -12,24 +13,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.projektmobpravi.domain.model.Category
-import com.example.projektmobpravi.domain.model.CustomCategory
 import com.example.projektmobpravi.ui.components.BottomNavigationBar
 import com.example.projektmobpravi.ui.home.getCategoryEmoji
 import com.example.projektmobpravi.ui.navigation.Screen
@@ -49,53 +49,39 @@ fun AddTransactionScreen(
     val viewModel: AddTransactionViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Dohvati skenirane podatke iz savedStateHandle
     val savedScannedAmount = navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.get<String>("scannedAmount")
-
+        ?.savedStateHandle?.get<String>("scannedAmount")
     val savedScannedNote = navController.currentBackStackEntry
-        ?.savedStateHandle
-        ?.get<String>("scannedNote")
-
+        ?.savedStateHandle?.get<String>("scannedNote")
     val newCategoryName = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("newCategoryName")
     val newCategoryEmoji = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("newCategoryEmoji")
 
-    var amount by remember { mutableStateOf(savedScannedAmount ?: scannedAmountFromRoute.ifEmpty { scannedAmount } ?: "") }
-    var note by remember { mutableStateOf(savedScannedNote ?: scannedNoteFromRoute.ifEmpty { null } ?: "") }
+    var amount by remember {
+        mutableStateOf(savedScannedAmount ?: scannedAmountFromRoute.ifEmpty { scannedAmount } ?: "")
+    }
+    var note by remember {
+        mutableStateOf(savedScannedNote ?: scannedNoteFromRoute.ifEmpty { null } ?: "")
+    }
     var showCurrencyDropdown by remember { mutableStateOf(false) }
     var categoryToDelete by remember { mutableStateOf<String?>(null) }
 
-    // Učitaj transakciju za editiranje
     LaunchedEffect(transactionId) {
-        if (transactionId != null) {
-            viewModel.loadTransactionForEdit(transactionId)
-        }
+        if (transactionId != null) viewModel.loadTransactionForEdit(transactionId)
     }
-
-    // Popuni polja kad se učita transakcija za edit
     LaunchedEffect(uiState.initialAmount) {
         if (uiState.isEditMode && uiState.initialAmount.isNotEmpty()) {
             amount = uiState.initialAmount
-            note = uiState.initialNote
+            note   = uiState.initialNote
         }
     }
-
-    // Osvježi amount kad se vrati sa Scan screena
     LaunchedEffect(savedScannedAmount) {
-        savedScannedAmount?.let {
-            if (it.isNotEmpty()) amount = it
-        }
+        savedScannedAmount?.let { if (it.isNotEmpty()) amount = it }
     }
-
     LaunchedEffect(savedScannedNote) {
-        savedScannedNote?.let {
-            if (it.isNotEmpty()) note = it
-        }
+        savedScannedNote?.let { if (it.isNotEmpty()) note = it }
     }
-
     LaunchedEffect(newCategoryName) {
         if (!newCategoryName.isNullOrEmpty()) {
             viewModel.addCustomCategory(newCategoryName, newCategoryEmoji ?: "📦")
@@ -103,7 +89,6 @@ fun AddTransactionScreen(
             navController.currentBackStackEntry?.savedStateHandle?.remove<String>("newCategoryEmoji")
         }
     }
-
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
             viewModel.resetSuccess()
@@ -112,7 +97,7 @@ fun AddTransactionScreen(
     }
 
     Scaffold(
-        bottomBar = { BottomNavigationBar(navController = navController) },
+        bottomBar      = { BottomNavigationBar(navController = navController) },
         containerColor = SurfaceLight
     ) { paddingValues ->
         Column(
@@ -121,121 +106,123 @@ fun AddTransactionScreen(
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Header
+            // ── Header ──────────────────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(
-                        brush = Brush.verticalGradient(
-                            colors = listOf(DeepGreen, MintGreen)
+                        brush = Brush.linearGradient(
+                            colors = listOf(DeepGreen, Color(0xFF025C46))
                         )
                     )
-                    .padding(horizontal = 20.dp, vertical = 24.dp)
             ) {
+                Canvas(modifier = Modifier.matchParentSize()) {
+                    drawCircle(
+                        color  = Color.White.copy(alpha = 0.05f),
+                        radius = 140.dp.toPx(),
+                        center = Offset(size.width * 0.88f, -40.dp.toPx())
+                    )
+                }
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier          = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = { navController.popBackStack() }) {
+                    Box(
+                        modifier         = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f))
+                            .clickable { navController.popBackStack() },
+                        contentAlignment = Alignment.Center
+                    ) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector        = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Nazad",
-                            tint = TextOnDark
+                            tint               = TextOnDark,
+                            modifier           = Modifier.size(18.dp)
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = if (uiState.isEditMode) "Uredi transakciju" else "Nova transakcija",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
+                        text  = if (uiState.isEditMode) "Uredi transakciju" else "Nova transakcija",
+                        style = MaterialTheme.typography.titleLarge,
                         color = TextOnDark
                     )
                 }
             }
 
             Column(
-                modifier = Modifier
+                modifier            = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
-                // Iznos + valuta
+                // ── Iznos + Valuta ───────────────────────────────────
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(20.dp),
+                    colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
-                        modifier = Modifier
+                        modifier            = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Iznos",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text  = "Iznos",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
-
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier              = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment     = Alignment.CenterVertically
                         ) {
                             OutlinedTextField(
-                                value = amount,
-                                onValueChange = {
-                                    amount = it
-                                    viewModel.clearError()
-                                },
-                                label = { Text("0.00") },
-                                keyboardOptions = KeyboardOptions(
-                                    keyboardType = KeyboardType.Decimal
-                                ),
-                                modifier = Modifier.weight(1f),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MintGreen,
+                                value           = amount,
+                                onValueChange   = { amount = it; viewModel.clearError() },
+                                label           = { Text("0.00") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                modifier        = Modifier.weight(1f),
+                                shape           = RoundedCornerShape(12.dp),
+                                colors          = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor   = MintGreen,
                                     unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                                    focusedLabelColor = MintGreen
+                                    focusedLabelColor    = MintGreen
                                 ),
                                 singleLine = true
                             )
-
                             Box {
                                 Card(
                                     modifier = Modifier
                                         .clickable { showCurrencyDropdown = true }
                                         .width(90.dp)
                                         .height(56.dp),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = DeepGreen
-                                    )
+                                    shape  = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = DeepGreen)
                                 ) {
                                     Box(
-                                        modifier = Modifier.fillMaxSize(),
+                                        modifier         = Modifier.fillMaxSize(),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
-                                            text = uiState.selectedCurrency,
-                                            color = TextOnDark,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp
+                                            text       = uiState.selectedCurrency,
+                                            style      = MaterialTheme.typography.titleMedium,
+                                            color      = TextOnDark
                                         )
                                     }
                                 }
-
                                 DropdownMenu(
-                                    expanded = showCurrencyDropdown,
-                                    onDismissRequest = { showCurrencyDropdown = false }
+                                    expanded          = showCurrencyDropdown,
+                                    onDismissRequest  = { showCurrencyDropdown = false }
                                 ) {
                                     supportedCurrencies.forEach { currency ->
                                         DropdownMenuItem(
-                                            text = { Text(currency) },
+                                            text    = { Text(currency, style = MaterialTheme.typography.bodyMedium) },
                                             onClick = {
                                                 viewModel.selectCurrency(currency)
                                                 showCurrencyDropdown = false
@@ -246,75 +233,68 @@ fun AddTransactionScreen(
                             }
                         }
 
-                        // Scan gumb — samo u add modu
                         if (!uiState.isEditMode) {
                             OutlinedButton(
-                                onClick = { navController.navigate(Screen.Scan.route) },
+                                onClick  = { navController.navigate(Screen.Scan.route) },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MintGreen
-                                )
+                                shape    = RoundedCornerShape(12.dp),
+                                colors   = ButtonDefaults.outlinedButtonColors(contentColor = MintGreen)
                             ) {
                                 Icon(
-                                    imageVector = Icons.Default.CameraAlt,
+                                    imageVector        = Icons.Default.CameraAlt,
                                     contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier           = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Skeniraj račun",
-                                    fontWeight = FontWeight.Medium
+                                    text  = "Skeniraj račun",
+                                    style = MaterialTheme.typography.labelLarge
                                 )
                             }
                         }
 
-                        // Prikaz skeniranog iznosa
                         if (!savedScannedAmount.isNullOrEmpty()) {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = SuccessGreen.copy(alpha = 0.1f)
-                                )
+                            Row(
+                                modifier              = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(SuccessGreen.copy(alpha = 0.09f))
+                                    .padding(12.dp),
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Row(
+                                Box(
                                     modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text(text = "✅", fontSize = 16.sp)
-                                    Text(
-                                        text = "Iznos prepoznat s računa",
-                                        fontSize = 13.sp,
-                                        color = SuccessGreen,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(SuccessGreen)
+                                )
+                                Text(
+                                    text  = "Iznos prepoznat s računa",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = SuccessGreen
+                                )
                             }
                         }
                     }
                 }
 
-                // Kategorije
+                // ── Kategorije ───────────────────────────────────────
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(20.dp),
+                    colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
-                        modifier = Modifier
+                        modifier            = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Kategorija",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text  = "Kategorija",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
 
@@ -343,7 +323,7 @@ fun AddTransactionScreen(
 
                         gridItems.chunked(4).forEach { rowItems ->
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier              = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 rowItems.forEach { item ->
@@ -357,21 +337,21 @@ fun AddTransactionScreen(
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(
                                                 when {
-                                                    isSelected -> DeepGreen
-                                                    item.isAddNew -> MintGreen.copy(alpha = 0.1f)
-                                                    else -> SurfaceLight
+                                                    isSelected   -> DeepGreen
+                                                    item.isAddNew -> MintGreen.copy(alpha = 0.08f)
+                                                    else          -> SurfaceLight
                                                 }
                                             )
                                             .border(
                                                 width = if (isSelected) 0.dp else 1.dp,
-                                                color = if (item.isAddNew)
-                                                    MintGreen.copy(alpha = 0.5f)
-                                                else
-                                                    TextMuted.copy(alpha = 0.2f),
+                                                color = when {
+                                                    item.isAddNew -> MintGreen.copy(alpha = 0.4f)
+                                                    else          -> TextMuted.copy(alpha = 0.18f)
+                                                },
                                                 shape = RoundedCornerShape(12.dp)
                                             )
                                             .combinedClickable(
-                                                onClick = { item.onClick() },
+                                                onClick     = { item.onClick() },
                                                 onLongClick = {
                                                     if (isCustom) categoryToDelete = item.name
                                                 }
@@ -379,20 +359,18 @@ fun AddTransactionScreen(
                                             .padding(8.dp),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Text(text = item.emoji, fontSize = 22.sp)
+                                        Text(text = item.emoji, style = MaterialTheme.typography.bodyLarge)
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = item.name,
-                                            fontSize = 10.sp,
+                                            text  = item.name,
+                                            style = MaterialTheme.typography.labelSmall,
                                             color = when {
-                                                isSelected -> TextOnDark
+                                                isSelected    -> TextOnDark
                                                 item.isAddNew -> MintGreen
-                                                else -> TextMuted
+                                                else          -> TextMuted
                                             },
                                             fontWeight = if (isSelected || item.isAddNew)
-                                                FontWeight.SemiBold
-                                            else
-                                                FontWeight.Normal
+                                                FontWeight.SemiBold else FontWeight.Normal
                                         )
                                     }
                                 }
@@ -404,84 +382,75 @@ fun AddTransactionScreen(
                     }
                 }
 
-                // Napomena
+                // ── Napomena ─────────────────────────────────────────
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(containerColor = SurfaceCard),
+                    modifier  = Modifier.fillMaxWidth(),
+                    shape     = RoundedCornerShape(20.dp),
+                    colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
                     elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
                     Column(
-                        modifier = Modifier
+                        modifier            = Modifier
                             .fillMaxWidth()
                             .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Napomena",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text  = "Napomena",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
-
                         OutlinedTextField(
-                            value = note,
+                            value         = note,
                             onValueChange = { note = it },
-                            label = { Text("npr. Konzum, benzinska...") },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = MintGreen,
+                            label         = { Text("npr. Konzum, benzinska...") },
+                            modifier      = Modifier.fillMaxWidth(),
+                            shape         = RoundedCornerShape(12.dp),
+                            colors        = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor   = MintGreen,
                                 unfocusedBorderColor = TextMuted.copy(alpha = 0.3f),
-                                focusedLabelColor = MintGreen
+                                focusedLabelColor    = MintGreen
                             ),
                             maxLines = 3
                         )
                     }
                 }
 
-                // Error poruka
                 uiState.errorMessage?.let { error ->
                     Text(
-                        text = error,
-                        color = ErrorRed,
-                        fontSize = 13.sp,
+                        text     = error,
+                        style    = MaterialTheme.typography.bodySmall,
+                        color    = ErrorRed,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
                 }
 
-                // Spremi / Dodaj gumb
                 Button(
-                    onClick = {
+                    onClick  = {
                         if (uiState.isEditMode) viewModel.updateTransaction(amount, note)
                         else viewModel.addTransaction(amount, note)
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = DeepGreen
-                    ),
-                    enabled = !uiState.isLoading
+                    modifier = Modifier.fillMaxWidth().height(56.dp),
+                    shape    = RoundedCornerShape(16.dp),
+                    colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                    enabled  = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = TextOnDark,
+                            modifier    = Modifier.size(20.dp),
+                            color       = TextOnDark,
                             strokeWidth = 2.dp
                         )
                     } else {
                         Text(
-                            text = if (uiState.isEditMode) "Spremi promjene" else "Dodaj transakciju",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            text  = if (uiState.isEditMode) "Spremi promjene" else "Dodaj transakciju",
+                            style = MaterialTheme.typography.titleMedium,
                             color = TextOnDark
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
@@ -489,22 +458,15 @@ fun AddTransactionScreen(
     categoryToDelete?.let { name ->
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
-            title = { Text("Obriši kategoriju") },
-            text = { Text("Sigurno želiš obrisati kategoriju \"$name\"?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteCustomCategory(name)
-                        categoryToDelete = null
-                    }
-                ) {
+            title            = { Text("Obriši kategoriju") },
+            text             = { Text("Sigurno želiš obrisati kategoriju \"$name\"?") },
+            confirmButton    = {
+                TextButton(onClick = { viewModel.deleteCustomCategory(name); categoryToDelete = null }) {
                     Text("Obriši", color = ErrorRed)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { categoryToDelete = null }) {
-                    Text("Odustani")
-                }
+                TextButton(onClick = { categoryToDelete = null }) { Text("Odustani") }
             }
         )
     }

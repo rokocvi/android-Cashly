@@ -1,5 +1,15 @@
 package com.example.projektmobpravi.ui.add
 
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -15,7 +25,12 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.*
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -34,6 +50,9 @@ import com.example.projektmobpravi.ui.components.BottomNavigationBar
 import com.example.projektmobpravi.ui.home.getCategoryEmoji
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
+import com.example.projektmobpravi.util.VoiceInputHelper
+import com.example.projektmobpravi.util.VoiceParseResult
+import com.example.projektmobpravi.util.VoiceParser
 
 val supportedCurrencies = listOf("EUR", "USD", "GBP", "CHF", "HRK")
 
@@ -48,6 +67,7 @@ fun AddTransactionScreen(
 ) {
     val viewModel: AddTransactionViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val context = LocalContext.current
 
     val savedScannedAmount = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("scannedAmount")
@@ -65,7 +85,51 @@ fun AddTransactionScreen(
         mutableStateOf(savedScannedNote ?: scannedNoteFromRoute.ifEmpty { null } ?: "")
     }
     var showCurrencyDropdown by remember { mutableStateOf(false) }
-    var categoryToDelete by remember { mutableStateOf<String?>(null) }
+    var categoryToDelete    by remember { mutableStateOf<String?>(null) }
+
+    // ── Voice input state ────────────────────────────────────────────
+    var isListening   by remember { mutableStateOf(false) }
+    var voiceLang     by remember { mutableStateOf("hr-HR") }
+    var voiceResult   by remember { mutableStateOf<VoiceParseResult?>(null) }
+    var voiceError    by remember { mutableStateOf<String?>(null) }
+    var showVoiceHelp by remember { mutableStateOf(false) }
+
+    val voiceHelper = remember(context) { VoiceInputHelper(context) }
+    DisposableEffect(voiceHelper) { onDispose { voiceHelper.destroy() } }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "mic")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue  = 0.35f,
+        targetValue   = 1f,
+        animationSpec = infiniteRepeatable(
+            animation  = tween(550, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulse"
+    )
+
+    val micPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            isListening = true
+            voiceHelper.startListening(
+                languageTag = voiceLang,
+                onResult    = { text ->
+                    isListening = false
+                    if (text.isNotEmpty()) {
+                        voiceResult = VoiceParser.parse(text, uiState.customCategories)
+                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                    } else {
+                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                    }
+                },
+                onError = { msg -> isListening = false; voiceError = msg }
+            )
+        } else {
+            voiceError = "Dozvola za mikrofon nije odobrena"
+        }
+    }
 
     LaunchedEffect(transactionId) {
         if (transactionId != null) viewModel.loadTransactionForEdit(transactionId)
@@ -234,22 +298,154 @@ fun AddTransactionScreen(
                         }
 
                         if (!uiState.isEditMode) {
-                            OutlinedButton(
-                                onClick  = { navController.navigate(Screen.Scan.route) },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape    = RoundedCornerShape(12.dp),
-                                colors   = ButtonDefaults.outlinedButtonColors(contentColor = MintGreen)
+                            Row(
+                                modifier              = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedButton(
+                                    onClick  = { navController.navigate(Screen.Scan.route) },
+                                    modifier = Modifier.weight(1f),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = MintGreen)
+                                ) {
+                                    Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Skeniraj", style = MaterialTheme.typography.labelLarge)
+                                }
+                                OutlinedButton(
+                                    onClick = {
+                                        voiceResult = null
+                                        voiceError  = null
+                                        val perm = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+                                        if (perm == PackageManager.PERMISSION_GRANTED) {
+                                            isListening = true
+                                            voiceHelper.startListening(
+                                                languageTag = voiceLang,
+                                                onResult    = { text ->
+                                                    isListening = false
+                                                    if (text.isNotEmpty()) {
+                                                        voiceResult = VoiceParser.parse(text, uiState.customCategories)
+                                                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                                                    } else {
+                                                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                                                    }
+                                                },
+                                                onError = { msg -> isListening = false; voiceError = msg }
+                                            )
+                                        } else {
+                                            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    colors   = ButtonDefaults.outlinedButtonColors(
+                                        contentColor   = MintGreen,
+                                        containerColor = if (isListening)
+                                            MintGreen.copy(alpha = pulseAlpha * 0.12f)
+                                        else Color.Transparent
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector        = Icons.Default.Mic,
+                                        contentDescription = null,
+                                        tint               = MintGreen.copy(alpha = if (isListening) pulseAlpha else 1f),
+                                        modifier           = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text  = if (isListening) "Slušam..." else "Glasovni",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        color = MintGreen.copy(alpha = if (isListening) pulseAlpha else 1f)
+                                    )
+                                }
+                            }
+
+                            // Language toggle + help
+                            Row(
+                                modifier              = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
+                                verticalAlignment     = Alignment.CenterVertically
                             ) {
                                 Icon(
-                                    imageVector        = Icons.Default.CameraAlt,
-                                    contentDescription = null,
-                                    modifier           = Modifier.size(18.dp)
+                                    imageVector        = Icons.Default.Info,
+                                    contentDescription = "Upute za glasovni unos",
+                                    tint               = TextMuted.copy(alpha = 0.55f),
+                                    modifier           = Modifier
+                                        .size(16.dp)
+                                        .clickable { showVoiceHelp = true }
                                 )
-                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text  = "Skeniraj račun",
-                                    style = MaterialTheme.typography.labelLarge
+                                    text  = "Jezik:",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = TextMuted
                                 )
+                                listOf("hr-HR" to "HR", "en-US" to "EN").forEach { (code, label) ->
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (voiceLang == code) DeepGreen else Color.Transparent)
+                                            .border(
+                                                width = 1.dp,
+                                                color = if (voiceLang == code) DeepGreen else TextMuted.copy(alpha = 0.25f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            )
+                                            .clickable { voiceLang = code }
+                                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text       = label,
+                                            style      = MaterialTheme.typography.labelSmall,
+                                            color      = if (voiceLang == code) TextOnDark else TextMuted,
+                                            fontWeight = if (voiceLang == code) FontWeight.SemiBold else FontWeight.Normal
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Voice result preview
+                            voiceResult?.let { result ->
+                                VoiceResultBanner(
+                                    result    = result,
+                                    onDismiss = { voiceResult = null },
+                                    onConfirm = {
+                                        amount = String.format(java.util.Locale.US, "%.2f", result.amount)
+                                        val builtin = Category.values().firstOrNull { it.displayName == result.categoryName }
+                                        if (builtin != null) viewModel.selectCategory(builtin)
+                                        else viewModel.selectCustomCategory(result.categoryName, result.categoryEmoji)
+                                        voiceResult = null
+                                    }
+                                )
+                            }
+
+                            // Voice error
+                            voiceError?.let { err ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(ErrorRed.copy(alpha = 0.07f))
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment     = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text     = err,
+                                        style    = MaterialTheme.typography.labelMedium,
+                                        color    = ErrorRed,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(20.dp)
+                                            .clip(CircleShape)
+                                            .background(ErrorRed.copy(alpha = 0.10f))
+                                            .clickable { voiceError = null },
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Close, null, tint = ErrorRed, modifier = Modifier.size(12.dp))
+                                    }
+                                }
                             }
                         }
 
@@ -455,6 +651,69 @@ fun AddTransactionScreen(
         }
     }
 
+    if (showVoiceHelp) {
+        AlertDialog(
+            onDismissRequest = { showVoiceHelp = false },
+            shape            = RoundedCornerShape(20.dp),
+            icon             = {
+                Icon(Icons.Default.Mic, null, tint = MintGreen, modifier = Modifier.size(28.dp))
+            },
+            title = {
+                Text(
+                    text  = "Glasovni unos",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = TextDark
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        text  = "Izgovori iznos i kategoriju. Aplikacija automatski prepoznaje oboje.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextMuted
+                    )
+                    VoiceHelpSection(
+                        title   = "Primjeri — Hrvatski",
+                        examples = listOf(
+                            "\"dvadeset pet eura, hrana\"",
+                            "\"pedeset prijevoz\"",
+                            "\"sto dvadeset zabava\"",
+                            "\"petnaest zdravlje\""
+                        )
+                    )
+                    VoiceHelpSection(
+                        title    = "Primjeri — English",
+                        examples = listOf(
+                            "\"twenty five euros, food\"",
+                            "\"fifty transport\"",
+                            "\"fifteen health\""
+                        )
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(AccentGold.copy(alpha = 0.08f))
+                            .padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text("💡", style = MaterialTheme.typography.bodySmall)
+                        Text(
+                            text  = "Za decimale izgovori broj s točkom: \"25.50 hrana\"",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextDark
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showVoiceHelp = false }) {
+                    Text("Razumijem", color = DeepGreen, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        )
+    }
+
     categoryToDelete?.let { name ->
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
@@ -469,5 +728,100 @@ fun AddTransactionScreen(
                 TextButton(onClick = { categoryToDelete = null }) { Text("Odustani") }
             }
         )
+    }
+}
+
+@Composable
+private fun VoiceHelpSection(title: String, examples: List<String>) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            text  = title,
+            style = MaterialTheme.typography.labelMedium,
+            color = DeepGreen,
+            fontWeight = FontWeight.SemiBold
+        )
+        examples.forEach { example ->
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment     = Alignment.Top
+            ) {
+                Text("•", style = MaterialTheme.typography.labelSmall, color = MintGreen)
+                Text(example, style = MaterialTheme.typography.labelSmall, color = TextDark)
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoiceResultBanner(
+    result: VoiceParseResult,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(SuccessGreen.copy(alpha = 0.08f))
+            .border(1.dp, SuccessGreen.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(
+            modifier            = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text  = "Prepoznato iz glasa",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted
+            )
+            Row(
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Text(
+                    text       = "€%.2f".format(result.amount),
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = DeepGreen
+                )
+                Text("—", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                Text(
+                    text       = "${result.categoryEmoji} ${result.categoryName}",
+                    style      = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color      = DeepGreen
+                )
+            }
+            Text(
+                text  = "\"${result.rawText}\"",
+                style = MaterialTheme.typography.labelSmall,
+                color = TextMuted
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(ErrorRed.copy(alpha = 0.10f))
+                    .clickable { onDismiss() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Close, null, tint = ErrorRed, modifier = Modifier.size(16.dp))
+            }
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(SuccessGreen.copy(alpha = 0.15f))
+                    .clickable { onConfirm() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.Check, null, tint = SuccessGreen, modifier = Modifier.size(16.dp))
+            }
+        }
     }
 }

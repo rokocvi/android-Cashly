@@ -4,16 +4,22 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,6 +33,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import java.util.Calendar
+import java.util.TimeZone
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,15 +51,53 @@ import com.github.mikephil.charting.data.BarEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StatsScreen(navController: NavHostController) {
     val viewModel: StatsViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
+    var showDatePicker by remember { mutableStateOf(false) }
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = uiState.selectedDate
+    )
+
     if (uiState.exportSuccess || uiState.exportError) {
         LaunchedEffect(uiState.exportSuccess, uiState.exportError) {
             viewModel.clearExportState()
+        }
+    }
+
+    if (showDatePicker) {
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    viewModel.selectDate(datePickerState.selectedDateMillis)
+                    showDatePicker = false
+                }) {
+                    Text("Odaberi", color = DeepGreen, style = MaterialTheme.typography.labelLarge)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) {
+                    Text("Odustani", color = TextMuted, style = MaterialTheme.typography.labelLarge)
+                }
+            },
+            shape  = RoundedCornerShape(24.dp),
+            colors = DatePickerDefaults.colors(
+                containerColor            = SurfaceCard,
+                titleContentColor         = TextDark,
+                headlineContentColor      = DeepGreen,
+                weekdayContentColor       = TextMuted,
+                selectedDayContainerColor = DeepGreen,
+                selectedDayContentColor   = TextOnDark,
+                todayContentColor         = DeepGreen,
+                todayDateBorderColor      = DeepGreen
+            )
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 
@@ -72,15 +118,25 @@ fun StatsScreen(navController: NavHostController) {
             ) {
                 item {
                     StatsHeader(
-                        onExportClick  = { viewModel.exportTransactions(context) },
-                        exportSuccess  = uiState.exportSuccess
+                        onExportClick   = { viewModel.exportTransactions(context) },
+                        onCalendarClick = { showDatePicker = true },
+                        exportSuccess   = uiState.exportSuccess
                     )
                 }
                 item {
                     PeriodSelector(
                         selectedPeriod   = uiState.selectedPeriod,
-                        onPeriodSelected = { viewModel.selectPeriod(it) }
+                        onPeriodSelected = { viewModel.selectPeriod(it) },
+                        dimmed           = uiState.selectedDate != null
                     )
+                }
+                if (uiState.selectedDate != null) {
+                    item {
+                        DateFilterChip(
+                            selectedDateMillis = uiState.selectedDate!!,
+                            onClear            = { viewModel.selectDate(null) }
+                        )
+                    }
                 }
                 item {
                     CategoryFilter(
@@ -99,15 +155,17 @@ fun StatsScreen(navController: NavHostController) {
                     )
                 }
                 item { CategoryStatsCard(categoryStats = uiState.categoryStats) }
-                item {
-                    Text(
-                        text     = "Zadnjih 7 dana",
-                        style    = MaterialTheme.typography.titleMedium,
-                        color    = TextDark,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
-                    )
+                if (uiState.selectedDate == null) {
+                    item {
+                        Text(
+                            text     = "Zadnjih 7 dana",
+                            style    = MaterialTheme.typography.titleMedium,
+                            color    = TextDark,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                        )
+                    }
+                    item { DailyStatsCard(dailyStats = uiState.dailyStats) }
                 }
-                item { DailyStatsCard(dailyStats = uiState.dailyStats) }
             }
         }
     }
@@ -116,7 +174,11 @@ fun StatsScreen(navController: NavHostController) {
 // ── Header ────────────────────────────────────────────
 
 @Composable
-fun StatsHeader(onExportClick: () -> Unit, exportSuccess: Boolean = false) {
+fun StatsHeader(
+    onExportClick: () -> Unit,
+    onCalendarClick: () -> Unit,
+    exportSuccess: Boolean = false
+) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -159,28 +221,45 @@ fun StatsHeader(onExportClick: () -> Unit, exportSuccess: Boolean = false) {
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.14f))
-                    .clickable { onExportClick() }
-                    .padding(horizontal = 14.dp, vertical = 9.dp)
-            ) {
-                Row(
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .clickable { onCalendarClick() },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector        = Icons.Default.Download,
-                        contentDescription = null,
+                        imageVector        = Icons.Default.DateRange,
+                        contentDescription = "Filtriraj po danu",
                         tint               = TextOnDark,
-                        modifier           = Modifier.size(16.dp)
+                        modifier           = Modifier.size(18.dp)
                     )
-                    Text(
-                        text  = "CSV",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = TextOnDark
-                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .clickable { onExportClick() }
+                        .padding(horizontal = 14.dp, vertical = 9.dp)
+                ) {
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.Download,
+                            contentDescription = null,
+                            tint               = TextOnDark,
+                            modifier           = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text  = "CSV",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = TextOnDark
+                        )
+                    }
                 }
             }
         }
@@ -192,7 +271,8 @@ fun StatsHeader(onExportClick: () -> Unit, exportSuccess: Boolean = false) {
 @Composable
 fun PeriodSelector(
     selectedPeriod: Period,
-    onPeriodSelected: (Period) -> Unit
+    onPeriodSelected: (Period) -> Unit,
+    dimmed: Boolean = false
 ) {
     Row(
         modifier              = Modifier
@@ -201,15 +281,18 @@ fun PeriodSelector(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Period.values().forEach { period ->
-            val isSelected = selectedPeriod == period
+            val isSelected = selectedPeriod == period && !dimmed
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(if (isSelected) DeepGreen else SurfaceCard)
+                    .background(
+                        if (isSelected) DeepGreen
+                        else SurfaceCard.copy(alpha = if (dimmed) 0.5f else 1f)
+                    )
                     .border(
                         width = if (isSelected) 0.dp else 1.dp,
-                        color = TextMuted.copy(alpha = 0.18f),
+                        color = TextMuted.copy(alpha = if (dimmed) 0.10f else 0.18f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .clickable { onPeriodSelected(period) }
@@ -220,15 +303,73 @@ fun PeriodSelector(
                     text       = period.displayName,
                     style      = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                    color      = if (isSelected) TextOnDark else TextMuted
+                    color      = if (isSelected) TextOnDark
+                                 else TextMuted.copy(alpha = if (dimmed) 0.40f else 1f)
                 )
             }
         }
     }
 }
 
+// ── Date Filter Chip ──────────────────────────────────
+
+@Composable
+fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
+    val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+    utcCal.timeInMillis = selectedDateMillis
+    val label = "${utcCal.get(Calendar.DAY_OF_MONTH)}. " +
+                "${utcCal.get(Calendar.MONTH) + 1}. " +
+                "${utcCal.get(Calendar.YEAR)}."
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(PrimaryContainer)
+            .border(1.dp, DeepGreen.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Icon(
+                imageVector        = Icons.Default.CalendarToday,
+                contentDescription = null,
+                tint               = DeepGreen,
+                modifier           = Modifier.size(16.dp)
+            )
+            Text(
+                text       = "Prikazano: $label",
+                style      = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                color      = DeepGreen
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(22.dp)
+                .clip(CircleShape)
+                .background(DeepGreen.copy(alpha = 0.12f))
+                .clickable { onClear() },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector        = Icons.Default.Close,
+                contentDescription = "Ukloni filter dana",
+                tint               = DeepGreen,
+                modifier           = Modifier.size(13.dp)
+            )
+        }
+    }
+}
+
 // ── Category Filter ───────────────────────────────────
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryFilter(
     categories: List<String>,
@@ -237,61 +378,240 @@ fun CategoryFilter(
 ) {
     if (categories.isEmpty()) return
 
+    var showSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Trigger button
     Row(
-        modifier              = Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceCard)
+            .border(
+                width = 1.dp,
+                color = if (selectedCategory != null) DeepGreen.copy(alpha = 0.50f)
+                        else TextMuted.copy(alpha = 0.18f),
+                shape = RoundedCornerShape(14.dp)
+            )
+            .clickable { showSheet = true }
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        val allSelected = selectedCategory == null
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(20.dp))
-                .background(if (allSelected) DeepGreen else SurfaceCard)
-                .border(
-                    width = if (allSelected) 0.dp else 1.dp,
-                    color = TextMuted.copy(alpha = 0.18f),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                .clickable { onCategorySelected(null) }
-                .padding(horizontal = 14.dp, vertical = 8.dp),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Icon(
+                imageVector        = Icons.Default.FilterList,
+                contentDescription = null,
+                tint               = if (selectedCategory != null) DeepGreen else TextMuted,
+                modifier           = Modifier.size(18.dp)
+            )
             Text(
-                text       = "Sve",
-                style      = MaterialTheme.typography.labelMedium,
-                fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color      = if (allSelected) TextOnDark else TextMuted
+                text       = if (selectedCategory != null)
+                                 "${getCategoryEmoji(selectedCategory)} $selectedCategory"
+                             else "Sve kategorije",
+                style      = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (selectedCategory != null) FontWeight.SemiBold else FontWeight.Normal,
+                color      = if (selectedCategory != null) DeepGreen else TextMuted
             )
         }
-
-        categories.forEach { category ->
-            val isSelected = selectedCategory == category
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(if (isSelected) DeepGreen else SurfaceCard)
-                    .border(
-                        width = if (isSelected) 0.dp else 1.dp,
-                        color = TextMuted.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(20.dp)
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (selectedCategory != null) {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(DeepGreen.copy(alpha = 0.10f))
+                        .clickable { onCategorySelected(null) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = Icons.Default.Close,
+                        contentDescription = "Ukloni filter",
+                        tint               = DeepGreen,
+                        modifier           = Modifier.size(12.dp)
                     )
-                    .clickable { onCategorySelected(if (isSelected) null else category) }
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
-                contentAlignment = Alignment.Center
+                }
+            }
+            Icon(
+                imageVector        = Icons.Default.KeyboardArrowDown,
+                contentDescription = null,
+                tint               = TextMuted,
+                modifier           = Modifier.size(20.dp)
+            )
+        }
+    }
+
+    // Bottom sheet
+    if (showSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showSheet = false },
+            sheetState       = sheetState,
+            shape            = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+            containerColor   = SurfaceLight,
+            dragHandle       = {
+                Box(
+                    modifier = Modifier
+                        .padding(top = 12.dp, bottom = 4.dp)
+                        .size(width = 36.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(TextMuted.copy(alpha = 0.25f))
+                )
+            }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
             ) {
                 Row(
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    modifier              = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
                 ) {
-                    Text(text = getCategoryEmoji(category), style = MaterialTheme.typography.labelSmall)
-                    Text(
-                        text       = category,
-                        style      = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color      = if (isSelected) TextOnDark else TextMuted
-                    )
+                    Column {
+                        Text(
+                            text  = "Filtriraj kategorije",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = TextDark
+                        )
+                        Text(
+                            text  = "${categories.size} kategorija dostupno",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextMuted
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(TextMuted.copy(alpha = 0.08f))
+                            .clickable { showSheet = false },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Default.Close,
+                            contentDescription = "Zatvori",
+                            tint               = TextMuted,
+                            modifier           = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = TextMuted.copy(alpha = 0.10f))
+
+                val allSelected = selectedCategory == null
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(if (allSelected) PrimaryContainer else Color.Transparent)
+                        .clickable {
+                            onCategorySelected(null)
+                            showSheet = false
+                        }
+                        .padding(horizontal = 20.dp, vertical = 14.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier         = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(DeepGreen.copy(alpha = 0.10f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector        = Icons.Default.FilterList,
+                                contentDescription = null,
+                                tint               = DeepGreen,
+                                modifier           = Modifier.size(20.dp)
+                            )
+                        }
+                        Text(
+                            text       = "Sve kategorije",
+                            style      = MaterialTheme.typography.bodyMedium,
+                            fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color      = if (allSelected) DeepGreen else TextDark
+                        )
+                    }
+                    if (allSelected) {
+                        Icon(
+                            imageVector        = Icons.Default.Check,
+                            contentDescription = null,
+                            tint               = DeepGreen,
+                            modifier           = Modifier.size(18.dp)
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = TextMuted.copy(alpha = 0.10f))
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(bottom = 8.dp)
+                ) {
+                    categories.forEach { category ->
+                        val isSelected = selectedCategory == category
+                        val catColor   = getCategoryColor(category)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(if (isSelected) PrimaryContainer else Color.Transparent)
+                                .clickable {
+                                    onCategorySelected(if (isSelected) null else category)
+                                    showSheet = false
+                                }
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier         = Modifier
+                                        .size(40.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(catColor.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text  = getCategoryEmoji(category),
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                }
+                                Text(
+                                    text       = category,
+                                    style      = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color      = if (isSelected) DeepGreen else TextDark
+                                )
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    imageVector        = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint               = DeepGreen,
+                                    modifier           = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

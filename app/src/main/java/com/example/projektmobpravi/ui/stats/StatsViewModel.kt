@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.TimeZone
 import javax.inject.Inject
 
 data class CategoryStat(
@@ -38,6 +39,7 @@ data class StatsUiState(
     val biggestCategory: String = "",
     val selectedPeriod: Period = Period.THIS_MONTH,
     val selectedCategory: String? = null,
+    val selectedDate: Long? = null,
     val exportSuccess: Boolean = false,
     val exportError: Boolean = false
 )
@@ -62,12 +64,17 @@ class StatsViewModel @Inject constructor(
     }
 
     fun selectPeriod(period: Period) {
-        _uiState.value = _uiState.value.copy(selectedPeriod = period)
+        _uiState.value = _uiState.value.copy(selectedPeriod = period, selectedDate = null)
         loadStats()
     }
 
     fun selectCategory(category: String?) {
         _uiState.value = _uiState.value.copy(selectedCategory = category)
+        loadStats()
+    }
+
+    fun selectDate(date: Long?) {
+        _uiState.value = _uiState.value.copy(selectedDate = date)
         loadStats()
     }
 
@@ -78,21 +85,37 @@ class StatsViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true)
 
             repository.getAllTransactions(userId).collectLatest { transactions ->
-                val period = _uiState.value.selectedPeriod
+                val period          = _uiState.value.selectedPeriod
                 val selectedCategory = _uiState.value.selectedCategory
-                val startDate = getStartDate(period)
-                val endDate = getEndDate(period)
+                val selectedDate    = _uiState.value.selectedDate
 
-                val periodFiltered = transactions.filter {
-                    it.date >= startDate && it.date < endDate
+                // Base filter: single day OR period
+                val baseFiltered = if (selectedDate != null) {
+                    val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
+                    utcCal.timeInMillis = selectedDate
+                    val localCal = Calendar.getInstance()
+                    localCal.set(
+                        utcCal.get(Calendar.YEAR),
+                        utcCal.get(Calendar.MONTH),
+                        utcCal.get(Calendar.DAY_OF_MONTH),
+                        0, 0, 0
+                    )
+                    localCal.set(Calendar.MILLISECOND, 0)
+                    val dayStart = localCal.timeInMillis
+                    val dayEnd   = dayStart + 24 * 60 * 60 * 1000L
+                    transactions.filter { it.date >= dayStart && it.date < dayEnd }
+                } else {
+                    val startDate = getStartDate(period)
+                    val endDate   = getEndDate(period)
+                    transactions.filter { it.date >= startDate && it.date < endDate }
                 }
 
-                val allCategories = periodFiltered.map { it.category }.distinct().sorted()
+                val allCategories = baseFiltered.map { it.category }.distinct().sorted()
 
                 val filtered = if (selectedCategory != null) {
-                    periodFiltered.filter { it.category == selectedCategory }
+                    baseFiltered.filter { it.category == selectedCategory }
                 } else {
-                    periodFiltered
+                    baseFiltered
                 }
 
                 val total = filtered.sumOf { it.amount }
@@ -103,42 +126,43 @@ class StatsViewModel @Inject constructor(
 
                 val categoryStats = categoryMap.map { (category, amount) ->
                     CategoryStat(
-                        category = category,
-                        amount = amount,
+                        category   = category,
+                        amount     = amount,
                         percentage = if (total > 0) (amount / total * 100).toFloat() else 0f
                     )
                 }.sortedByDescending { it.amount }
 
-                val dailyMap = filtered
-                    .groupBy { transaction ->
-                        val cal = Calendar.getInstance()
-                        cal.timeInMillis = transaction.date
-                        "${cal.get(Calendar.DAY_OF_MONTH)}.${cal.get(Calendar.MONTH) + 1}."
-                    }
-                    .mapValues { (_, list) -> list.sumOf { it.amount } }
-
-                val dailyStats = dailyMap.map { (day, amount) ->
-                    DailyStat(day = day, amount = amount)
-                }.takeLast(7)
+                val dailyStats = if (selectedDate != null) {
+                    emptyList()
+                } else {
+                    val dailyMap = filtered
+                        .groupBy { transaction ->
+                            val cal = Calendar.getInstance()
+                            cal.timeInMillis = transaction.date
+                            "${cal.get(Calendar.DAY_OF_MONTH)}.${cal.get(Calendar.MONTH) + 1}."
+                        }
+                        .mapValues { (_, list) -> list.sumOf { it.amount } }
+                    dailyMap.map { (day, amount) -> DailyStat(day = day, amount = amount) }.takeLast(7)
+                }
 
                 val lastMonthStart = getLastMonthStart()
-                val lastMonthEnd = getStartDate(Period.THIS_MONTH)
+                val lastMonthEnd   = getStartDate(Period.THIS_MONTH)
                 val lastMonthTotal = transactions
                     .filter { it.date >= lastMonthStart && it.date < lastMonthEnd }
                     .sumOf { it.amount }
 
-                val daysInPeriod = getDaysInPeriod(period)
-                val averagePerDay = if (daysInPeriod > 0) total / daysInPeriod else 0.0
+                val daysInPeriod   = getDaysInPeriod(period)
+                val averagePerDay  = if (daysInPeriod > 0) total / daysInPeriod else 0.0
                 val biggestCategory = categoryStats.firstOrNull()?.category ?: ""
 
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    allCategories = allCategories,
-                    categoryStats = categoryStats,
-                    dailyStats = dailyStats,
-                    totalThisMonth = total,
-                    totalLastMonth = lastMonthTotal,
-                    averagePerDay = averagePerDay,
+                    isLoading       = false,
+                    allCategories   = allCategories,
+                    categoryStats   = categoryStats,
+                    dailyStats      = dailyStats,
+                    totalThisMonth  = total,
+                    totalLastMonth  = lastMonthTotal,
+                    averagePerDay   = averagePerDay,
                     biggestCategory = biggestCategory
                 )
             }

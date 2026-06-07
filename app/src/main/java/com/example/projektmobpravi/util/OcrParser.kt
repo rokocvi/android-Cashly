@@ -120,6 +120,71 @@ object OcrParser {
         "book"             to "Knjižara"
     )
 
+    // ── Mapiranje trgovine → kategorija ──────────────────────────────────────
+
+    private val storeToCategory = mapOf(
+        // Supermarketi / maloprodajne trgovine → Trgovina
+        "NTL"               to "Trgovina",
+        "Konzum"            to "Trgovina",
+        "Interspar"         to "Trgovina",
+        "Kaufland"          to "Trgovina",
+        "Studenac"          to "Trgovina",
+        "Plodine"           to "Trgovina",
+        "Trgocentar"        to "Trgovina",
+        "Mercator"          to "Trgovina",
+        "Eurospin"          to "Trgovina",
+        "K-plus"            to "Trgovina",
+        "Tommy"             to "Trgovina",
+        "Billa"             to "Trgovina",
+        "Lidl"              to "Trgovina",
+        "Spar"              to "Trgovina",
+        "Müller"            to "Trgovina",
+        // Brza hrana / ugostiteljstvo → Hrana
+        "McDonald's"        to "Hrana",
+        "Burger King"       to "Hrana",
+        "Subway"            to "Hrana",
+        "KFC"               to "Hrana",
+        "Slastičarna"       to "Hrana",
+        "Pekarnica"         to "Hrana",
+        "Pizzeria"          to "Hrana",
+        "Restoran"          to "Hrana",
+        "Pekara"            to "Hrana",
+        "Konoba"            to "Hrana",
+        "Bistro"            to "Hrana",
+        "Mesnica"           to "Hrana",
+        "Pizza"             to "Hrana",
+        "Kafić"             to "Hrana",
+        // Prijevoz
+        "Autoservis"        to "Prijevoz",
+        "Servis"            to "Prijevoz",
+        "Benzinska postaja" to "Prijevoz",
+        "Tifon"             to "Prijevoz",
+        "Petrol"            to "Prijevoz",
+        "Orlen"             to "Prijevoz",
+        "Parking"           to "Prijevoz",
+        // Zdravlje — farmacija, medicina, fitness
+        "Ljekarna"          to "Zdravlje",
+        "DM"                to "Zdravlje",
+        "Optika"            to "Zdravlje",
+        "Teretana"          to "Zdravlje",
+        "Fitness"           to "Zdravlje",
+        // Ljepota — frizerski, kozmetički saloni
+        "Frizerski salon"   to "Ljepota",
+        "Kozmetički salon"  to "Ljepota",
+        "Brijač"            to "Ljepota",
+        // Zabava
+        "Kino"              to "Zabava",
+        "Knjižara"          to "Zabava",
+        // Ostalo
+        "HT"                to "Ostalo",
+        "A1"                to "Ostalo",
+        "Telemach"          to "Ostalo",
+        "Bonbon"            to "Ostalo",
+        "Cvjećarna"         to "Ostalo",
+        "Praonica"          to "Ostalo",
+        "Tiskara"           to "Ostalo"
+    )
+
     // ── Javna API ─────────────────────────────────────────────────────────────
 
     fun parse(text: String): OcrResult {
@@ -127,9 +192,11 @@ object OcrParser {
             .map { it.trim() }
             .filter { it.isNotBlank() }
 
+        val storeName = extractStoreName(lines)
         return OcrResult(
             amount    = extractAmount(lines),
-            storeName = extractStoreName(lines),
+            storeName = storeName,
+            category  = storeToCategory[storeName],
             rawText   = text
         )
     }
@@ -442,5 +509,6 @@ object OcrParser {
 data class OcrResult(
     val amount: String?,
     val storeName: String?,
+    val category: String?,
     val rawText: String
 )

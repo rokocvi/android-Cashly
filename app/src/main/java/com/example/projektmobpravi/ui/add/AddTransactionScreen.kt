@@ -2,6 +2,7 @@ package com.example.projektmobpravi.ui.add
 
 import android.Manifest
 import android.content.pm.PackageManager
+import kotlinx.coroutines.delay
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -63,16 +64,20 @@ fun AddTransactionScreen(
     scannedAmount: String? = null,
     transactionId: Int? = null,
     scannedAmountFromRoute: String = "",
-    scannedNoteFromRoute: String = ""
+    scannedNoteFromRoute: String = "",
+    scannedCategoryFromRoute: String = "",
+    autoVoice: Boolean = false
 ) {
     val viewModel: AddTransactionViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    val savedScannedAmount = navController.currentBackStackEntry
+    val savedScannedAmount   = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("scannedAmount")
-    val savedScannedNote = navController.currentBackStackEntry
+    val savedScannedNote     = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("scannedNote")
+    val savedScannedCategory = navController.currentBackStackEntry
+        ?.savedStateHandle?.get<String>("scannedCategory")
     val newCategoryName = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("newCategoryName")
     val newCategoryEmoji = navController.currentBackStackEntry
@@ -145,6 +150,37 @@ fun AddTransactionScreen(
     }
     LaunchedEffect(savedScannedNote) {
         savedScannedNote?.let { if (it.isNotEmpty()) note = it }
+    }
+    LaunchedEffect(savedScannedCategory ?: scannedCategoryFromRoute) {
+        val catName = (savedScannedCategory?.takeIf { it.isNotEmpty() }
+            ?: scannedCategoryFromRoute.takeIf { it.isNotEmpty() }) ?: return@LaunchedEffect
+        Category.values().firstOrNull { it.displayName == catName }
+            ?.let { viewModel.selectCategory(it) }
+    }
+    LaunchedEffect(autoVoice) {
+        if (!autoVoice) return@LaunchedEffect
+        delay(350)
+        voiceResult = null
+        voiceError  = null
+        val perm = context.checkSelfPermission(Manifest.permission.RECORD_AUDIO)
+        if (perm == PackageManager.PERMISSION_GRANTED) {
+            isListening = true
+            voiceHelper.startListening(
+                languageTag = voiceLang,
+                onResult    = { text ->
+                    isListening = false
+                    if (text.isNotEmpty()) {
+                        voiceResult = VoiceParser.parse(text, uiState.customCategories)
+                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                    } else {
+                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                    }
+                },
+                onError = { msg -> isListening = false; voiceError = msg }
+            )
+        } else {
+            micPermissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        }
     }
     LaunchedEffect(newCategoryName) {
         if (!newCategoryName.isNullOrEmpty()) {
@@ -623,6 +659,14 @@ fun AddTransactionScreen(
 
                 Button(
                     onClick  = {
+                        // Ako banner čeka potvrdu, primijeni glasovni rezultat prije submita
+                        voiceResult?.let { result ->
+                            amount = String.format(java.util.Locale.US, "%.2f", result.amount)
+                            val builtin = Category.values().firstOrNull { it.displayName == result.categoryName }
+                            if (builtin != null) viewModel.selectCategory(builtin)
+                            else viewModel.selectCustomCategory(result.categoryName, result.categoryEmoji)
+                            voiceResult = null
+                        }
                         if (uiState.isEditMode) viewModel.updateTransaction(amount, note)
                         else viewModel.addTransaction(amount, note)
                     },

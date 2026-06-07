@@ -60,17 +60,19 @@ fun ScanScreen(navController: NavHostController) {
 
     LaunchedEffect(uiState.ocrResult) {
         uiState.ocrResult?.let { result ->
-            val amount = result.amount ?: ""
-            val note   = result.storeName ?: ""
+            val amount   = result.amount    ?: ""
+            val note     = result.storeName ?: ""
+            val category = result.category  ?: ""
             val prevRoute = navController.previousBackStackEntry?.destination?.route
 
             if (prevRoute == Screen.Home.route) {
-                navController.navigate(Screen.AddTransaction.fromScanRoute(amount, note)) {
+                navController.navigate(Screen.AddTransaction.fromScanRoute(amount, note, category)) {
                     popUpTo(Screen.Home.route) { inclusive = false }
                 }
             } else {
-                navController.previousBackStackEntry?.savedStateHandle?.set("scannedAmount", amount)
-                navController.previousBackStackEntry?.savedStateHandle?.set("scannedNote", note)
+                navController.previousBackStackEntry?.savedStateHandle?.set("scannedAmount",   amount)
+                navController.previousBackStackEntry?.savedStateHandle?.set("scannedNote",     note)
+                navController.previousBackStackEntry?.savedStateHandle?.set("scannedCategory", category)
                 navController.popBackStack()
             }
         }

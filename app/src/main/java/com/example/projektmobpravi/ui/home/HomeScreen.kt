@@ -56,6 +56,8 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
+private var shakeTipShown = false
+
 @Composable
 fun HomeScreen(navController: NavHostController) {
     val viewModel: HomeViewModel = hiltViewModel()
@@ -67,11 +69,19 @@ fun HomeScreen(navController: NavHostController) {
     val accelerometer = remember { sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) }
 
     DisposableEffect(Unit) {
-        val detector = ShakeDetector {
-            scope.launch { navController.navigate(Screen.Scan.route) }
-        }
+        val detector = ShakeDetector(
+            onSingleShake = {
+                scope.launch { navController.navigate(Screen.Scan.route) }
+            },
+            onDoubleShake = {
+                scope.launch { navController.navigate(Screen.AddTransaction.voiceRoute()) }
+            }
+        )
         sensorManager.registerListener(detector, accelerometer, SensorManager.SENSOR_DELAY_UI)
-        onDispose { sensorManager.unregisterListener(detector) }
+        onDispose {
+            sensorManager.unregisterListener(detector)
+            detector.cancel()
+        }
     }
 
     LaunchedEffect(uiState.isLoggedOut) {
@@ -84,6 +94,8 @@ fun HomeScreen(navController: NavHostController) {
 
     var showShakeTip by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        if (shakeTipShown) return@LaunchedEffect
+        shakeTipShown = true
         delay(600)
         showShakeTip = true
         delay(3000)
@@ -214,22 +226,33 @@ fun HomeScreen(navController: NavHostController) {
             exit     = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 16.dp, bottom = paddingValues.calculateBottomPadding() + 12.dp)
+                .padding(
+                    start  = 16.dp,
+                    end    = 80.dp,
+                    bottom = paddingValues.calculateBottomPadding() + 16.dp
+                )
         ) {
             Row(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(DeepGreen.copy(alpha = 0.92f))
-                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFF1A1040).copy(alpha = 0.93f))
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
                 verticalAlignment     = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(text = "📳", fontSize = 15.sp)
-                Text(
-                    text  = "Protresite mobitel za skeniranje računa",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Color.White
-                )
+                Text(text = "📳", fontSize = 14.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                    Text(
+                        text  = "Protresite → skeniranje",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White
+                    )
+                    Text(
+                        text  = "Dvaput → glasovni unos 🎤",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Color.White.copy(alpha = 0.75f)
+                    )
+                }
             }
         }
         } // outer Box
@@ -692,11 +715,13 @@ fun EmptyTransactionsCard() {
 fun getCategoryEmoji(category: String): String {
     return when (category) {
         "Hrana"      -> "🍔"
+        "Trgovina"   -> "🛒"
         "Prijevoz"   -> "🚗"
         "Zabava"     -> "🎬"
         "Kuća"       -> "🏠"
         "Zdravlje"   -> "💊"
         "Odijevanje" -> "👕"
+        "Ljepota"    -> "💇"
         else         -> "📦"
     }
 }
@@ -704,11 +729,13 @@ fun getCategoryEmoji(category: String): String {
 fun getCategoryColor(category: String): Color {
     return when (category) {
         "Hrana"      -> CategoryFood
+        "Trgovina"   -> CategoryShopping
         "Prijevoz"   -> CategoryTransport
         "Zabava"     -> CategoryEntertainment
         "Kuća"       -> CategoryHousing
         "Zdravlje"   -> CategoryHealth
         "Odijevanje" -> CategoryClothing
+        "Ljepota"    -> CategoryBeauty
         else         -> CategoryOther
     }
 }

@@ -38,9 +38,11 @@ val PrimaryContainer = Color(0xFFEDE9FE)  // Lagani lavender — container za in
 
 // ── Kategorije ─────────────────────────────────────────
 val CategoryFood          = Color(0xFFEF4444)  // Crvena
+val CategoryShopping      = Color(0xFF0EA5E9)  // Svijetloplava
 val CategoryTransport     = Color(0xFF3B82F6)  // Plava
 val CategoryEntertainment = Color(0xFF8B5CF6)  // Ljubičasta
 val CategoryHealth        = Color(0xFF10B981)  // Smaragdna
 val CategoryHousing       = Color(0xFFF97316)  // Narančasta
 val CategoryClothing      = Color(0xFFEC4899)  // Roza
+val CategoryBeauty        = Color(0xFFF472B6)  // Roza-magenta
 val CategoryOther         = Color(0xFF6B7280)  // Siva

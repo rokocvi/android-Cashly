@@ -28,12 +28,13 @@ sealed class Screen(val route: String) {
     object Register : Screen("register")
     object Home : Screen("home")
     object AddTransaction : Screen(
-        "add_transaction?transactionId={transactionId}&scannedAmount={scannedAmount}&scannedNote={scannedNote}"
+        "add_transaction?transactionId={transactionId}&scannedAmount={scannedAmount}&scannedNote={scannedNote}&scannedCategory={scannedCategory}&autoVoice={autoVoice}"
     ) {
         const val addRoute = "add_transaction?transactionId=-1"
         fun editRoute(transactionId: Int) = "add_transaction?transactionId=$transactionId"
-        fun fromScanRoute(amount: String, note: String) =
-            "add_transaction?transactionId=-1&scannedAmount=${Uri.encode(amount)}&scannedNote=${Uri.encode(note)}"
+        fun fromScanRoute(amount: String, note: String, category: String = "") =
+            "add_transaction?transactionId=-1&scannedAmount=${Uri.encode(amount)}&scannedNote=${Uri.encode(note)}&scannedCategory=${Uri.encode(category)}"
+        fun voiceRoute() = "add_transaction?transactionId=-1&autoVoice=true"
     }
     object Stats : Screen("stats")
     object Scan : Screen("scan")
@@ -64,19 +65,25 @@ fun NavGraph(navController: NavHostController, startDestination: String = Screen
         composable(
             route = Screen.AddTransaction.route,
             arguments = listOf(
-                navArgument("transactionId") { type = NavType.IntType; defaultValue = -1 },
-                navArgument("scannedAmount") { type = NavType.StringType; defaultValue = "" },
-                navArgument("scannedNote") { type = NavType.StringType; defaultValue = "" }
+                navArgument("transactionId")   { type = NavType.IntType;    defaultValue = -1    },
+                navArgument("scannedAmount")   { type = NavType.StringType; defaultValue = ""    },
+                navArgument("scannedNote")     { type = NavType.StringType; defaultValue = ""    },
+                navArgument("scannedCategory") { type = NavType.StringType; defaultValue = ""    },
+                navArgument("autoVoice")       { type = NavType.BoolType;   defaultValue = false }
             )
         ) { backStackEntry ->
-            val transactionId = backStackEntry.arguments?.getInt("transactionId") ?: -1
-            val scannedAmount = backStackEntry.arguments?.getString("scannedAmount") ?: ""
-            val scannedNote = backStackEntry.arguments?.getString("scannedNote") ?: ""
+            val transactionId   = backStackEntry.arguments?.getInt("transactionId") ?: -1
+            val scannedAmount   = backStackEntry.arguments?.getString("scannedAmount") ?: ""
+            val scannedNote     = backStackEntry.arguments?.getString("scannedNote") ?: ""
+            val scannedCategory = backStackEntry.arguments?.getString("scannedCategory") ?: ""
+            val autoVoice       = backStackEntry.arguments?.getBoolean("autoVoice") ?: false
             AddTransactionScreen(
-                navController = navController,
-                transactionId = if (transactionId == -1) null else transactionId,
-                scannedAmountFromRoute = scannedAmount,
-                scannedNoteFromRoute = scannedNote
+                navController            = navController,
+                transactionId            = if (transactionId == -1) null else transactionId,
+                scannedAmountFromRoute   = scannedAmount,
+                scannedNoteFromRoute     = scannedNote,
+                scannedCategoryFromRoute = scannedCategory,
+                autoVoice                = autoVoice
             )
         }
         composable(Screen.Stats.route) {

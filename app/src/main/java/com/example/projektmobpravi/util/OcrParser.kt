@@ -1,5 +1,7 @@
 package com.example.projektmobpravi.util
 
+import java.util.Locale
+
 object OcrParser {
 
     // ── Keyword prioriteti ────────────────────────────────────────────────────
@@ -172,7 +174,7 @@ object OcrParser {
                     ?.let { if (it >= 0.50) amounts.add(it) }
             }
         }
-        return amounts.maxOrNull()?.let { "%.2f".format(it) }
+        return amounts.maxOrNull()?.let { String.format(Locale.US, "%.2f", it) }
     }
 
     /**
@@ -200,7 +202,7 @@ object OcrParser {
             // Uvjet: gotovina > ukupno, vraćeno > 0, i ukupno + vraćeno = gotovina
             if (total >= 0.50 && cash > total && change > 0.0 &&
                 Math.abs(total + change - cash) < 0.005) {
-                return "%.2f".format(total)
+                return String.format(Locale.US, "%.2f", total)
             }
         }
         return null
@@ -236,7 +238,7 @@ object OcrParser {
             }
         }
 
-        return candidates.maxOrNull()?.let { "%.2f".format(it) }
+        return candidates.maxOrNull()?.let { String.format(Locale.US, "%.2f", it) }
     }
 
     /**
@@ -357,7 +359,7 @@ object OcrParser {
             .mapNotNull { extractNumberFromLine(lines[it])?.toDoubleOrNull() }
             .filter { it >= 0.50 }
             .maxOrNull()
-            ?.let { "%.2f".format(it) }
+            ?.let { String.format(Locale.US, "%.2f", it) }
     }
 
     // ── Parsiranje broja ─────────────────────────────────────────────────────

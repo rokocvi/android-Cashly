@@ -63,9 +63,18 @@ fun StatsScreen(navController: NavHostController) {
         initialSelectedDateMillis = uiState.selectedDate
     )
 
-    if (uiState.exportSuccess || uiState.exportError) {
-        LaunchedEffect(uiState.exportSuccess, uiState.exportError) {
-            viewModel.clearExportState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.exportSuccess, uiState.exportError) {
+        when {
+            uiState.exportSuccess -> {
+                snackbarHostState.showSnackbar("CSV uspješno preuzet u Downloads")
+                viewModel.clearExportState()
+            }
+            uiState.exportError -> {
+                snackbarHostState.showSnackbar("Greška pri izvozu — pokušaj ponovo")
+                viewModel.clearExportState()
+            }
         }
     }
 
@@ -104,7 +113,7 @@ fun StatsScreen(navController: NavHostController) {
     Scaffold(
         bottomBar      = { BottomNavigationBar(navController = navController) },
         containerColor = SurfaceLight,
-        snackbarHost   = {}
+        snackbarHost   = { SnackbarHost(hostState = snackbarHostState) }
     ) { paddingValues ->
 
         if (uiState.isLoading) {
@@ -119,8 +128,7 @@ fun StatsScreen(navController: NavHostController) {
                 item {
                     StatsHeader(
                         onExportClick   = { viewModel.exportTransactions(context) },
-                        onCalendarClick = { showDatePicker = true },
-                        exportSuccess   = uiState.exportSuccess
+                        onCalendarClick = { showDatePicker = true }
                     )
                 }
                 item {
@@ -176,8 +184,7 @@ fun StatsScreen(navController: NavHostController) {
 @Composable
 fun StatsHeader(
     onExportClick: () -> Unit,
-    onCalendarClick: () -> Unit,
-    exportSuccess: Boolean = false
+    onCalendarClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -215,9 +222,9 @@ fun StatsHeader(
                     color = TextOnDark
                 )
                 Text(
-                    text  = if (exportSuccess) "✓ Exportano u Downloads" else "Pregled tvoje potrošnje",
+                    text  = "Pregled tvoje potrošnje",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (exportSuccess) AccentGold else TextOnDark.copy(alpha = 0.65f)
+                    color = TextOnDark.copy(alpha = 0.65f)
                 )
             }
 

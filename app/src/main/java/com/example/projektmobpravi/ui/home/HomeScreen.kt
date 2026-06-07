@@ -213,8 +213,8 @@ fun HomeScreen(navController: NavHostController) {
             enter    = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
             exit     = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
             modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(bottom = paddingValues.calculateBottomPadding() + 12.dp)
+                .align(Alignment.BottomStart)
+                .padding(start = 16.dp, bottom = paddingValues.calculateBottomPadding() + 12.dp)
         ) {
             Row(
                 modifier = Modifier

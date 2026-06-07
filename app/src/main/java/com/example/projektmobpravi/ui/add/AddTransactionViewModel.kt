@@ -143,7 +143,7 @@ class AddTransactionViewModel @Inject constructor(
     }
 
     fun addTransaction(amountString: String, note: String) {
-        val amount = amountString.toDoubleOrNull()
+        val amount = amountString.replace(",", ".").toDoubleOrNull()
 
         if (amount == null || amount <= 0) {
             _uiState.value = _uiState.value.copy(errorMessage = "Unesite ispravan iznos")
@@ -192,7 +192,7 @@ class AddTransactionViewModel @Inject constructor(
     }
 
     fun updateTransaction(amountString: String, note: String) {
-        val amount = amountString.toDoubleOrNull()
+        val amount = amountString.replace(",", ".").toDoubleOrNull()
 
         if (amount == null || amount <= 0) {
             _uiState.value = _uiState.value.copy(errorMessage = "Unesite ispravan iznos")

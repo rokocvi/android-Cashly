@@ -1,7 +1,14 @@
 package com.example.projektmobpravi.ui.navigation
 
 import android.net.Uri
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -37,8 +44,13 @@ sealed class Screen(val route: String) {
 @Composable
 fun NavGraph(navController: NavHostController, startDestination: String = Screen.Login.route) {
     NavHost(
-        navController    = navController,
-        startDestination = startDestination
+        navController      = navController,
+        startDestination   = startDestination,
+        modifier           = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        enterTransition    = { fadeIn(animationSpec = tween(durationMillis = 220)) },
+        exitTransition     = { fadeOut(animationSpec = tween(durationMillis = 180)) },
+        popEnterTransition = { fadeIn(animationSpec = tween(durationMillis = 220)) },
+        popExitTransition  = { fadeOut(animationSpec = tween(durationMillis = 180)) }
     ) {
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)

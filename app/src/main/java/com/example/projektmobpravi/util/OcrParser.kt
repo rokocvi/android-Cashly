@@ -14,12 +14,14 @@ object OcrParser {
         "za plaćanje eur", "za plaćanje",
         "in ukupno(s porezom)", "in ukupno (s porezom)",
         "iznos eur", "iznos:",
+        "ukupno eur",          // dvokolonski računi: labela u lijevom, iznos u desnom stupcu
         "grand total", "amount due", "total due"
     )
 
     private val totalKeywordsMid = listOf(
         "ukupno", "jkupno",  // "jkupno" = česta OCR greška za "ukupno" (J izgleda kao U)
-        "total amount", "total", "svega"
+        "total amount", "total", "svega",
+        "prodaja"  // terminal kartica: "PRODAJA" prethodi naplaćenom iznosu na svim HR fiskalnim računima
     )
 
     private val totalKeywordsLow = listOf(
@@ -34,7 +36,7 @@ object OcrParser {
 
     private val storeKeywords = linkedMapOf(
         "narodni trgova"   to "NTL",
-        "konzum"           to "NTL",
+        "konzum"           to "Konzum",
         "ntl"              to "NTL",
         "Konzum"           to "Konzum",
         // Supermarketi — duži ispred
@@ -146,7 +148,7 @@ object OcrParser {
             ?: extractFromCashPayment(lines)
             ?: findAmountByKeywords(lines, totalKeywordsMid)
             ?: findAmountByKeywords(lines, totalKeywordsLow)
-            ?: fallbackLargestAmount(lines)
+            ?: findTotalByWideScan(lines)
     }
 
     /**
@@ -292,7 +294,19 @@ object OcrParser {
             markers.any { lower.contains(it) }
         }.takeIf { it >= 0 }
 
-        return listOfNotNull(firstMatch(paymentMarkers), firstMatch(taxMarkers)).minOrNull()
+        // Oznaka plaćanja (kartica, gotovina…) triggerira cutoff SAMO ako su
+        // novčani iznosi vidljivi u neposrednoj okolini te linije (±1-2 retka).
+        // Ako je oznaka sama bez iznosa (npr. "KARTICA" kao kolumni header na NTL
+        // računu koji ispisuje terminal podatke PRIJE stavki), nije to pravi
+        // cutoff marker — ignoriramo ga da ne odsijekamo traženje prerano.
+        val rawPaymentIdx = firstMatch(paymentMarkers)
+        val paymentIdx = rawPaymentIdx?.takeIf { idx ->
+            val from = maxOf(0, idx - 1)
+            val to   = minOf(lines.size, idx + 3)
+            lines.subList(from, to).any { extractNumberFromLine(it) != null }
+        }
+
+        return listOfNotNull(paymentIdx, firstMatch(taxMarkers)).minOrNull()
     }
 
     private fun lineMatchesAnyKeyword(line: String, keywords: List<String>): Boolean {
@@ -310,15 +324,37 @@ object OcrParser {
     private fun isPdvCategoryLine(line: String) = pdvCategoryPattern.matches(line.trim())
 
     /**
-     * Fallback: ako niti jedna ključna riječ nije pronađena, uzimamo najveći iznos
-     * prije sekcije plaćanja/PDV-a. Filtriramo iznose < 0.50 € da izbjegnemo sitnice.
+     * Posljednji pokušaj: pretraži cijeli dokument i vrati NAJVEĆI iznos koji
+     * nije u sekciji plaćanja i nije postotak ili datum.
+     *
+     * Matematički argument: ukupni iznos uvijek je >= svakoj pojedinoj stavci,
+     * a iznos gotovine/kartice filtriramo — pa max ostatka = ukupni iznos.
+     *
+     * Posebno korisno za dvokolonske račune (Konzum, Spar…) gdje OCR čita cijeli
+     * lijevi stupac (labele) a zatim desni stupac (iznosi), zbog čega su "UKUPNO EUR"
+     * i 2,50 razdvojeni desecima linija u OCR tekstu, a cutoff koji se triggerira
+     * na "PLAĆENO" prereže pretraživanje prerano.
      */
-    private fun fallbackLargestAmount(lines: List<String>): String? {
-        val cutoff = findSearchCutoff(lines)
-        val searchLines = if (cutoff != null) lines.subList(0, cutoff) else lines
-        return searchLines
-            .mapNotNull { extractNumberFromLine(it) }
-            .mapNotNull { it.toDoubleOrNull() }
+    private fun findTotalByWideScan(lines: List<String>): String? {
+        val paymentTerms = listOf(
+            "gotovina", "kartica", "mastercard", "maestro", "visa",
+            "amex", "contactless", "beskontaktno",
+            "vraćeno", "vraceno", "kusur", "ostatak",
+            "plaćeno", "placeno"
+        )
+        val yearPattern = Regex("""\b20\d\d\b""")
+
+        fun isNearPaymentTerm(idx: Int) = (-1..1).any { offset ->
+            val i = idx + offset
+            i in lines.indices && paymentTerms.any { lines[i].lowercase().contains(it) }
+        }
+
+        return lines.indices
+            .filterNot { lines[it].contains('%') }               // preskoči postotke (stope PDV)
+            .filterNot { yearPattern.containsMatchIn(lines[it]) } // preskoči retke s datumom/godinom
+            .filterNot { isNearPaymentTerm(it) }                 // preskoči iznose uz oznaku plaćanja
+            .filterNot { isPdvCategoryLine(lines[it]) }          // preskoči PDV kategorizacijske iznose
+            .mapNotNull { extractNumberFromLine(lines[it])?.toDoubleOrNull() }
             .filter { it >= 0.50 }
             .maxOrNull()
             ?.let { "%.2f".format(it) }

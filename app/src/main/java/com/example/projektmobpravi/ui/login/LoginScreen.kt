@@ -42,6 +42,7 @@ fun LoginScreen(navController: NavHostController) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+    var rememberMe by remember { mutableStateOf(false) }
 
     LaunchedEffect(uiState.isSuccess) {
         if (uiState.isSuccess) {
@@ -56,7 +57,7 @@ fun LoginScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(DeepGreen, Color(0xFF025C46))
+                    colors = listOf(DeepGreen, BrandEnd)
                 )
             )
     ) {
@@ -196,13 +197,30 @@ fun LoginScreen(navController: NavHostController) {
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        modifier          = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked         = rememberMe,
+                            onCheckedChange = { rememberMe = it },
+                            colors          = CheckboxDefaults.colors(
+                                checkedColor   = MintGreen,
+                                uncheckedColor = TextMuted
+                            )
+                        )
+                        Text(
+                            text  = "Zapamti me",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextDark
+                        )
+                    }
 
                     Button(
-                        onClick  = { viewModel.login(email, password) },
+                        onClick  = { viewModel.login(email, password, rememberMe) },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(12.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         enabled  = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
@@ -237,7 +255,7 @@ fun LoginScreen(navController: NavHostController) {
                         onClick  = { navController.navigate(Screen.Register.route) },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(12.dp),
-                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = DeepGreen),
+                        colors   = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                         border   = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp)
                     ) {
                         Text(

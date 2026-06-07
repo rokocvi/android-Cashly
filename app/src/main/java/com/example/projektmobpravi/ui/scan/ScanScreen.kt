@@ -105,7 +105,7 @@ fun ScanScreen(navController: NavHostController) {
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(14.dp)
                         ) {
-                            CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
                             Text(
                                 text  = "Analiziram račun...",
                                 style = MaterialTheme.typography.bodyMedium,
@@ -277,7 +277,7 @@ fun CameraContent(
                         Icon(
                             imageVector        = Icons.Default.Camera,
                             contentDescription = "Slikaj",
-                            tint               = DeepGreen,
+                            tint               = MaterialTheme.colorScheme.primary,
                             modifier           = Modifier.size(34.dp)
                         )
                     }
@@ -366,7 +366,7 @@ fun PermissionDeniedContent(
                 modifier         = Modifier
                     .size(80.dp)
                     .clip(RoundedCornerShape(24.dp))
-                    .background(DeepGreen.copy(alpha = 0.08f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = "📷", style = MaterialTheme.typography.displayLarge)
@@ -388,7 +388,7 @@ fun PermissionDeniedContent(
                 onClick  = onRequestPermission,
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape    = RoundedCornerShape(12.dp),
-                colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen)
+                colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
             ) {
                 Text(
                     text  = "Dozvoli pristup kameri",

@@ -176,7 +176,7 @@ fun AddTransactionScreen(
                     .fillMaxWidth()
                     .background(
                         brush = Brush.linearGradient(
-                            colors = listOf(DeepGreen, Color(0xFF025C46))
+                            colors = listOf(DeepGreen, BrandEnd)
                         )
                     )
             ) {
@@ -267,7 +267,7 @@ fun AddTransactionScreen(
                                         .width(90.dp)
                                         .height(56.dp),
                                     shape  = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = DeepGreen)
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary)
                                 ) {
                                     Box(
                                         modifier         = Modifier.fillMaxSize(),
@@ -383,10 +383,10 @@ fun AddTransactionScreen(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(if (voiceLang == code) DeepGreen else Color.Transparent)
+                                            .background(if (voiceLang == code) MaterialTheme.colorScheme.primary else Color.Transparent)
                                             .border(
                                                 width = 1.dp,
-                                                color = if (voiceLang == code) DeepGreen else TextMuted.copy(alpha = 0.25f),
+                                                color = if (voiceLang == code) MaterialTheme.colorScheme.primary else TextMuted.copy(alpha = 0.25f),
                                                 shape = RoundedCornerShape(6.dp)
                                             )
                                             .clickable { voiceLang = code }
@@ -533,7 +533,7 @@ fun AddTransactionScreen(
                                             .clip(RoundedCornerShape(12.dp))
                                             .background(
                                                 when {
-                                                    isSelected   -> DeepGreen
+                                                    isSelected   -> MaterialTheme.colorScheme.primary
                                                     item.isAddNew -> MintGreen.copy(alpha = 0.08f)
                                                     else          -> SurfaceLight
                                                 }
@@ -628,7 +628,7 @@ fun AddTransactionScreen(
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape    = RoundedCornerShape(16.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                    colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled  = !uiState.isLoading
                 ) {
                     if (uiState.isLoading) {
@@ -708,7 +708,7 @@ fun AddTransactionScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showVoiceHelp = false }) {
-                    Text("Razumijem", color = DeepGreen, style = MaterialTheme.typography.labelLarge)
+                    Text("Razumijem", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 }
             }
         )
@@ -737,7 +737,7 @@ private fun VoiceHelpSection(title: String, examples: List<String>) {
         Text(
             text  = title,
             style = MaterialTheme.typography.labelMedium,
-            color = DeepGreen,
+            color = MaterialTheme.colorScheme.primary,
             fontWeight = FontWeight.SemiBold
         )
         examples.forEach { example ->
@@ -785,14 +785,14 @@ private fun VoiceResultBanner(
                     text       = "€%.2f".format(result.amount),
                     style      = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color      = DeepGreen
+                    color      = MaterialTheme.colorScheme.primary
                 )
                 Text("—", style = MaterialTheme.typography.bodySmall, color = TextMuted)
                 Text(
                     text       = "${result.categoryEmoji} ${result.categoryName}",
                     style      = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color      = DeepGreen
+                    color      = MaterialTheme.colorScheme.primary
                 )
             }
             Text(

@@ -54,7 +54,7 @@ fun BudgetScreen(navController: NavHostController) {
 
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
@@ -89,7 +89,7 @@ fun BudgetHeader() {
             .fillMaxWidth()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(DeepGreen, Color(0xFF025C46))
+                    colors = listOf(DeepGreen, BrandEnd)
                 )
             )
     ) {
@@ -137,7 +137,7 @@ fun BudgetSummaryCard(items: List<BudgetItem>) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 16.dp),
         shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = DeepGreen),
+        colors    = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary),
         elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
     ) {
         Column(
@@ -325,8 +325,8 @@ fun BudgetEditDialog(
                     singleLine      = true,
                     modifier        = Modifier.fillMaxWidth(),
                     colors          = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = DeepGreen,
-                        focusedLabelColor  = DeepGreen
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        focusedLabelColor  = MaterialTheme.colorScheme.primary
                     )
                 )
             }
@@ -336,7 +336,7 @@ fun BudgetEditDialog(
                 onClick  = { onConfirm(inputText.toDoubleOrNull()) },
                 enabled  = isValid
             ) {
-                Text("Spremi", color = if (isValid) DeepGreen else TextMuted)
+                Text("Spremi", color = if (isValid) MaterialTheme.colorScheme.primary else TextMuted)
             }
         },
         dismissButton = {

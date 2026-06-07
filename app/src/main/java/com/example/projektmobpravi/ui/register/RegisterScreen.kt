@@ -62,7 +62,7 @@ fun RegisterScreen(navController: NavHostController) {
             .fillMaxSize()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(DeepGreen, Color(0xFF025C46))
+                    colors = listOf(DeepGreen, BrandEnd)
                 )
             )
     ) {
@@ -237,7 +237,7 @@ fun RegisterScreen(navController: NavHostController) {
                         onClick  = { viewModel.register(username, email, password, confirmPassword) },
                         modifier = Modifier.fillMaxWidth().height(52.dp),
                         shape    = RoundedCornerShape(12.dp),
-                        colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                        colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                         enabled  = !uiState.isLoading
                     ) {
                         if (uiState.isLoading) {
@@ -262,7 +262,7 @@ fun RegisterScreen(navController: NavHostController) {
                         Text(
                             text  = "Već imaš račun? Prijavi se",
                             style = MaterialTheme.typography.labelLarge,
-                            color = DeepGreen
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
                 }

@@ -77,7 +77,7 @@ fun StatsScreen(navController: NavHostController) {
                     viewModel.selectDate(datePickerState.selectedDateMillis)
                     showDatePicker = false
                 }) {
-                    Text("Odaberi", color = DeepGreen, style = MaterialTheme.typography.labelLarge)
+                    Text("Odaberi", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 }
             },
             dismissButton = {
@@ -89,12 +89,12 @@ fun StatsScreen(navController: NavHostController) {
             colors = DatePickerDefaults.colors(
                 containerColor            = SurfaceCard,
                 titleContentColor         = TextDark,
-                headlineContentColor      = DeepGreen,
+                headlineContentColor      = MaterialTheme.colorScheme.primary,
                 weekdayContentColor       = TextMuted,
-                selectedDayContainerColor = DeepGreen,
+                selectedDayContainerColor = MaterialTheme.colorScheme.primary,
                 selectedDayContentColor   = TextOnDark,
-                todayContentColor         = DeepGreen,
-                todayDateBorderColor      = DeepGreen
+                todayContentColor         = MaterialTheme.colorScheme.primary,
+                todayDateBorderColor      = MaterialTheme.colorScheme.primary
             )
         ) {
             DatePicker(state = datePickerState)
@@ -109,7 +109,7 @@ fun StatsScreen(navController: NavHostController) {
 
         if (uiState.isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
@@ -184,7 +184,7 @@ fun StatsHeader(
             .fillMaxWidth()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(DeepGreen, Color(0xFF025C46))
+                    colors = listOf(DeepGreen, BrandEnd)
                 )
             )
     ) {
@@ -287,7 +287,7 @@ fun PeriodSelector(
                     .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
-                        if (isSelected) DeepGreen
+                        if (isSelected) MaterialTheme.colorScheme.primary
                         else SurfaceCard.copy(alpha = if (dimmed) 0.5f else 1f)
                     )
                     .border(
@@ -326,8 +326,8 @@ fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clip(RoundedCornerShape(14.dp))
-            .background(PrimaryContainer)
-            .border(1.dp, DeepGreen.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+            .background(MaterialTheme.colorScheme.primaryContainer)
+            .border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment     = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -339,28 +339,28 @@ fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
             Icon(
                 imageVector        = Icons.Default.CalendarToday,
                 contentDescription = null,
-                tint               = DeepGreen,
+                tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(16.dp)
             )
             Text(
                 text       = "Prikazano: $label",
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
-                color      = DeepGreen
+                color      = MaterialTheme.colorScheme.primary
             )
         }
         Box(
             modifier = Modifier
                 .size(22.dp)
                 .clip(CircleShape)
-                .background(DeepGreen.copy(alpha = 0.12f))
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
                 .clickable { onClear() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector        = Icons.Default.Close,
                 contentDescription = "Ukloni filter dana",
-                tint               = DeepGreen,
+                tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(13.dp)
             )
         }
@@ -390,7 +390,7 @@ fun CategoryFilter(
             .background(SurfaceCard)
             .border(
                 width = 1.dp,
-                color = if (selectedCategory != null) DeepGreen.copy(alpha = 0.50f)
+                color = if (selectedCategory != null) MaterialTheme.colorScheme.primary.copy(alpha = 0.50f)
                         else TextMuted.copy(alpha = 0.18f),
                 shape = RoundedCornerShape(14.dp)
             )
@@ -406,7 +406,7 @@ fun CategoryFilter(
             Icon(
                 imageVector        = Icons.Default.FilterList,
                 contentDescription = null,
-                tint               = if (selectedCategory != null) DeepGreen else TextMuted,
+                tint               = if (selectedCategory != null) MaterialTheme.colorScheme.primary else TextMuted,
                 modifier           = Modifier.size(18.dp)
             )
             Text(
@@ -415,7 +415,7 @@ fun CategoryFilter(
                              else "Sve kategorije",
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selectedCategory != null) FontWeight.SemiBold else FontWeight.Normal,
-                color      = if (selectedCategory != null) DeepGreen else TextMuted
+                color      = if (selectedCategory != null) MaterialTheme.colorScheme.primary else TextMuted
             )
         }
         Row(
@@ -427,14 +427,14 @@ fun CategoryFilter(
                     modifier = Modifier
                         .size(20.dp)
                         .clip(CircleShape)
-                        .background(DeepGreen.copy(alpha = 0.10f))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f))
                         .clickable { onCategorySelected(null) },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector        = Icons.Default.Close,
                         contentDescription = "Ukloni filter",
-                        tint               = DeepGreen,
+                        tint               = MaterialTheme.colorScheme.primary,
                         modifier           = Modifier.size(12.dp)
                     )
                 }
@@ -529,13 +529,13 @@ fun CategoryFilter(
                             modifier         = Modifier
                                 .size(40.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(DeepGreen.copy(alpha = 0.10f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector        = Icons.Default.FilterList,
                                 contentDescription = null,
-                                tint               = DeepGreen,
+                                tint               = MaterialTheme.colorScheme.primary,
                                 modifier           = Modifier.size(20.dp)
                             )
                         }
@@ -543,14 +543,14 @@ fun CategoryFilter(
                             text       = "Sve kategorije",
                             style      = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
-                            color      = if (allSelected) DeepGreen else TextDark
+                            color      = if (allSelected) MaterialTheme.colorScheme.primary else TextDark
                         )
                     }
                     if (allSelected) {
                         Icon(
                             imageVector        = Icons.Default.Check,
                             contentDescription = null,
-                            tint               = DeepGreen,
+                            tint               = MaterialTheme.colorScheme.primary,
                             modifier           = Modifier.size(18.dp)
                         )
                     }
@@ -570,7 +570,7 @@ fun CategoryFilter(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (isSelected) PrimaryContainer else Color.Transparent)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
                                 .clickable {
                                     onCategorySelected(if (isSelected) null else category)
                                     showSheet = false
@@ -599,14 +599,14 @@ fun CategoryFilter(
                                     text       = category,
                                     style      = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color      = if (isSelected) DeepGreen else TextDark
+                                    color      = if (isSelected) MaterialTheme.colorScheme.primary else TextDark
                                 )
                             }
                             if (isSelected) {
                                 Icon(
                                     imageVector        = Icons.Default.Check,
                                     contentDescription = null,
-                                    tint               = DeepGreen,
+                                    tint               = MaterialTheme.colorScheme.primary,
                                     modifier           = Modifier.size(18.dp)
                                 )
                             }
@@ -633,7 +633,7 @@ fun StatsSummaryRow(uiState: StatsUiState) {
             icon     = Icons.Default.AccountBalanceWallet,
             label    = "Ukupno",
             value    = "€%.2f".format(uiState.totalThisMonth),
-            color    = DeepGreen
+            color    = MaterialTheme.colorScheme.primary
         )
         SummaryCard(
             modifier = Modifier.weight(1f),

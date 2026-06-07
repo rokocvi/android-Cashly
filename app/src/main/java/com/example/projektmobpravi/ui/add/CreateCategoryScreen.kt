@@ -51,7 +51,7 @@ fun CreateCategoryScreen(navController: NavHostController) {
                     .fillMaxWidth()
                     .background(
                         brush = Brush.linearGradient(
-                            colors = listOf(DeepGreen, Color(0xFF025C46))
+                            colors = listOf(DeepGreen, BrandEnd)
                         )
                     )
             ) {
@@ -116,7 +116,7 @@ fun CreateCategoryScreen(navController: NavHostController) {
                             modifier         = Modifier
                                 .size(56.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(DeepGreen.copy(alpha = 0.08f)),
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(text = selectedEmoji, style = MaterialTheme.typography.headlineMedium)
@@ -207,12 +207,12 @@ fun CreateCategoryScreen(navController: NavHostController) {
                                             .weight(1f)
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(
-                                                if (isSelected) PrimaryContainer
+                                                if (isSelected) MaterialTheme.colorScheme.primaryContainer
                                                 else Color.Transparent
                                             )
                                             .border(
                                                 width = if (isSelected) 2.dp else 1.dp,
-                                                color = if (isSelected) DeepGreen
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary
                                                 else TextMuted.copy(alpha = 0.18f),
                                                 shape = RoundedCornerShape(10.dp)
                                             )
@@ -244,7 +244,7 @@ fun CreateCategoryScreen(navController: NavHostController) {
                     },
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape    = RoundedCornerShape(16.dp),
-                    colors   = ButtonDefaults.buttonColors(containerColor = DeepGreen),
+                    colors   = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                     enabled  = name.isNotBlank()
                 ) {
                     Text(

@@ -3,6 +3,13 @@ package com.example.projektmobpravi.ui.home
 import android.content.Context
 import android.hardware.Sensor
 import android.hardware.SensorManager
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -15,8 +22,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,10 +48,12 @@ import com.example.projektmobpravi.data.local.entity.TransactionEntity
 import com.example.projektmobpravi.ui.components.BottomNavigationBar
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
+import com.example.projektmobpravi.ui.theme.LocalTheme
 import com.example.projektmobpravi.util.ShakeDetector
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -62,11 +74,27 @@ fun HomeScreen(navController: NavHostController) {
         onDispose { sensorManager.unregisterListener(detector) }
     }
 
+    LaunchedEffect(uiState.isLoggedOut) {
+        if (uiState.isLoggedOut) {
+            navController.navigate(Screen.Login.route) {
+                popUpTo(0) { inclusive = true }
+            }
+        }
+    }
+
+    var showShakeTip by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(600)
+        showShakeTip = true
+        delay(3000)
+        showShakeTip = false
+    }
+
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
                 onClick          = { navController.navigate(Screen.AddTransaction.addRoute) },
-                containerColor   = DeepGreen,
+                containerColor   = MaterialTheme.colorScheme.primary,
                 contentColor     = TextOnDark,
                 shape            = RoundedCornerShape(16.dp),
                 modifier         = Modifier.size(56.dp)
@@ -82,12 +110,13 @@ fun HomeScreen(navController: NavHostController) {
         containerColor = SurfaceLight
     ) { paddingValues ->
 
+        Box(modifier = Modifier.fillMaxSize()) {
         if (uiState.isLoading) {
             Box(
                 modifier        = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = DeepGreen, strokeWidth = 3.dp)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
             }
         } else {
             LazyColumn(
@@ -99,13 +128,37 @@ fun HomeScreen(navController: NavHostController) {
                 item {
                     HomeHeader(
                         username = uiState.username,
-                        onLogout = {
-                            viewModel.logout()
-                            navController.navigate(Screen.Login.route) {
-                                popUpTo(Screen.Home.route) { inclusive = true }
-                            }
-                        }
+                        onLogout = { viewModel.logout() }
                     )
+                }
+
+                item {
+                    AnimatedVisibility(
+                        visible = uiState.isOffline,
+                        enter   = expandVertically(),
+                        exit    = shrinkVertically()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(AccentGold.copy(alpha = 0.12f))
+                                .padding(horizontal = 20.dp, vertical = 10.dp),
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector        = Icons.Default.CloudOff,
+                                contentDescription = null,
+                                tint               = AccentGold,
+                                modifier           = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text  = "Nema internetske veze — prikazuju se lokalni podaci",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = AccentGold
+                            )
+                        }
+                    }
                 }
 
                 item { TotalSpendingCard(total = uiState.totalThisMonth) }
@@ -154,6 +207,32 @@ fun HomeScreen(navController: NavHostController) {
                 }
             }
         }
+
+        AnimatedVisibility(
+            visible  = showShakeTip,
+            enter    = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+            exit     = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = paddingValues.calculateBottomPadding() + 12.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(DeepGreen.copy(alpha = 0.92f))
+                    .padding(horizontal = 18.dp, vertical = 10.dp),
+                verticalAlignment     = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(text = "📳", fontSize = 15.sp)
+                Text(
+                    text  = "Protresite mobitel za skeniranje računa",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White
+                )
+            }
+        }
+        } // outer Box
     }
 }
 
@@ -164,14 +243,13 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
             .fillMaxWidth()
             .background(
                 brush = Brush.linearGradient(
-                    colors = listOf(DeepGreen, Color(0xFF025C46))
+                    colors = listOf(DeepGreen, BrandEnd)
                 )
             )
     ) {
-        // Suptilni dekorativni krugovi
         Canvas(modifier = Modifier.matchParentSize()) {
             drawCircle(
-                color  = Color.White.copy(alpha = 0.05f),
+                color  = Color.White.copy(alpha = 0.06f),
                 radius = 180.dp.toPx(),
                 center = Offset(size.width * 0.88f, -55.dp.toPx())
             )
@@ -179,6 +257,12 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                 color  = Color.White.copy(alpha = 0.04f),
                 radius = 110.dp.toPx(),
                 center = Offset(-35.dp.toPx(), size.height * 0.85f)
+            )
+            // Suptilni zlatni glow na dnu
+            drawCircle(
+                color  = Color(0xFFF79009).copy(alpha = 0.07f),
+                radius = 90.dp.toPx(),
+                center = Offset(size.width * 0.5f, size.height * 1.3f)
             )
         }
 
@@ -227,21 +311,43 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                     }
                 }
 
-                // Logout gumb
-                Box(
-                    modifier         = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.12f))
-                        .clickable { onLogout() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector        = Icons.AutoMirrored.Filled.Logout,
-                        contentDescription = "Odjava",
-                        tint               = TextOnDark.copy(alpha = 0.9f),
-                        modifier           = Modifier.size(18.dp)
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    val theme = LocalTheme.current
+
+                    // Tema toggle (sunce / mjesec)
+                    Box(
+                        modifier         = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.12f))
+                            .clickable { theme.toggle() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector        = if (theme.isDark)
+                                Icons.Default.LightMode else Icons.Default.DarkMode,
+                            contentDescription = if (theme.isDark) "Svjetla tema" else "Tamna tema",
+                            tint               = TextOnDark.copy(alpha = 0.9f),
+                            modifier           = Modifier.size(18.dp)
+                        )
+                    }
+
+                    // Logout gumb
+                    Box(
+                        modifier         = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.12f))
+                            .clickable { onLogout() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector        = Icons.AutoMirrored.Filled.Logout,
+                            contentDescription = "Odjava",
+                            tint               = TextOnDark.copy(alpha = 0.9f),
+                            modifier           = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
 
@@ -309,13 +415,13 @@ fun TotalSpendingCard(total: Double) {
                 modifier         = Modifier
                     .size(56.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(DeepGreen.copy(alpha = 0.07f)),
+                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector        = Icons.Default.AccountBalanceWallet,
                     contentDescription = null,
-                    tint               = DeepGreen,
+                    tint               = MaterialTheme.colorScheme.primary,
                     modifier           = Modifier.size(28.dp)
                 )
             }
@@ -443,12 +549,20 @@ fun TransactionItem(
         colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Row(
-            modifier          = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            // Obojana lijeva traka po boji kategorije
+            Box(
+                modifier = Modifier
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(getCategoryColor(transaction.category))
+            )
+            Row(
+                modifier          = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
             // Squircle ikona kategorije
             Box(
                 modifier         = Modifier
@@ -534,6 +648,7 @@ fun TransactionItem(
                     )
                 }
             }
+            }
         }
     }
 }
@@ -553,7 +668,7 @@ fun EmptyTransactionsCard() {
             modifier         = Modifier
                 .size(72.dp)
                 .clip(CircleShape)
-                .background(DeepGreen.copy(alpha = 0.06f)),
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f)),
             contentAlignment = Alignment.Center
         ) {
             Text(text = "💸", fontSize = 34.sp)

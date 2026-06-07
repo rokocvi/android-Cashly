@@ -1,5 +1,6 @@
 package com.example.projektmobpravi.ui.scan
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import com.example.projektmobpravi.util.OcrParser
 import com.example.projektmobpravi.util.OcrResult
@@ -28,7 +29,13 @@ class ScanViewModel @Inject constructor() : ViewModel() {
     fun onImageCaptured(text: String) {
         _uiState.value = _uiState.value.copy(isScanning = true)
 
+        Log.d("OCR_RAW", "=== RAW OCR TEXT ===")
+        text.lines().forEachIndexed { i, line -> Log.d("OCR_RAW", "$i: $line") }
+        Log.d("OCR_RAW", "=== END ===")
+
         val result = OcrParser.parse(text)
+
+        Log.d("OCR_RAW", "Parsed amount: ${result.amount} | store: ${result.storeName}")
 
         _uiState.value = _uiState.value.copy(
             isScanning = false,

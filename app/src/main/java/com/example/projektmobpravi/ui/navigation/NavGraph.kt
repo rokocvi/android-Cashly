@@ -35,10 +35,10 @@ sealed class Screen(val route: String) {
 }
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(navController: NavHostController, startDestination: String = Screen.Login.route) {
     NavHost(
-        navController = navController,
-        startDestination = Screen.Login.route
+        navController    = navController,
+        startDestination = startDestination
     ) {
         composable(Screen.Login.route) {
             LoginScreen(navController = navController)

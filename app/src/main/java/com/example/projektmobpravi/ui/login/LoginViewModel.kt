@@ -1,9 +1,13 @@
 package com.example.projektmobpravi.ui.login
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -18,16 +22,25 @@ data class LoginUiState(
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(LoginUiState()) // samo viewModel moze mijenjat
-    val uiState: StateFlow<LoginUiState> = _uiState //ui moze samo citat, javan, ne moze mijenjat
+    private val prefs get() = context.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
 
-    fun login(email: String, password: String) {
+    private val _uiState = MutableStateFlow(LoginUiState())
+    val uiState: StateFlow<LoginUiState> = _uiState
+
+    fun login(email: String, password: String, rememberMe: Boolean) {
         if (email.isBlank() || password.isBlank()) {
             _uiState.value = _uiState.value.copy(
                 errorMessage = "Email i lozinka ne smiju biti prazni"
+            )
+            return
+        }
+        if (!isOnline()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Nema internetske veze. Provjeri konekciju i pokušaj ponovo."
             )
             return
         }
@@ -36,6 +49,7 @@ class LoginViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
                 auth.signInWithEmailAndPassword(email, password).await()
+                prefs.edit().putBoolean("remember_me", rememberMe).apply()
                 _uiState.value = _uiState.value.copy(isLoading = false, isSuccess = true)
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
@@ -44,6 +58,12 @@ class LoginViewModel @Inject constructor(
                 )
             }
         }
+    }
+
+    private fun isOnline(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
     fun clearError() {

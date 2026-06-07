@@ -123,10 +123,27 @@ object VoiceParser {
     }
 
     private fun parseAmount(text: String): Double? {
-        // Fast path: digit number (e.g. "25", "25.50", "25,50")
-        val match = Regex("""(\d+)[.,](\d{1,2})|\d+""").find(text)
-        if (match != null) return match.value.replace(",", ".").toDoubleOrNull()
-        // Slow path: word numbers
+        // Thousands separator — exactly 3 digits after . or ,
+        // HR: "2.000" or "1.500,50"  |  EN: "2,000" or "1,500.50"
+        Regex("""(\d{1,3}(?:\.\d{3})+)(?:,(\d{1,2}))?""").find(text)?.let { m ->
+            val int = m.groupValues[1].replace(".", "")
+            val dec = m.groupValues[2]
+            return if (dec.isEmpty()) int.toDoubleOrNull() else "$int.$dec".toDoubleOrNull()
+        }
+        Regex("""(\d{1,3}(?:,\d{3})+)(?:\.(\d{1,2}))?""").find(text)?.let { m ->
+            val int = m.groupValues[1].replace(",", "")
+            val dec = m.groupValues[2]
+            return if (dec.isEmpty()) int.toDoubleOrNull() else "$int.$dec".toDoubleOrNull()
+        }
+        // Decimal — 1 or 2 digits after separator
+        Regex("""(\d+)[.,](\d{1,2})""").find(text)?.let { m ->
+            return m.value.replace(",", ".").toDoubleOrNull()
+        }
+        // Plain integer
+        Regex("""\d+""").find(text)?.let { m ->
+            return m.value.toDoubleOrNull()
+        }
+        // Word numbers
         return parseWordNumber(text)
     }
 
@@ -135,35 +152,55 @@ object VoiceParser {
             .map { it.trim() }
             .filter { it.isNotEmpty() && it !in setOf("i", "and", "a") && it !in currencyWords }
 
+        if (tokens.isEmpty()) return null
+
+        // total  — running sum of completed groups (e.g. after "thousand")
+        // current — accumulator for the current group
+        // curTens — pending tens value within current group
         var total   = 0
+        var current = 0
         var curTens = 0
 
         for (token in tokens) {
             when {
-                hundredsMap.containsKey(token) -> {
-                    total  += curTens + (hundredsMap[token] ?: 0)
+                token == "hundred" -> {
+                    // EN: "two hundred" → multiply preceding sub-group by 100
+                    val sub = curTens + current
+                    current = (if (sub == 0) 1 else sub) * 100
                     curTens = 0
+                }
+                token == "sto" -> {
+                    // HR: "sto" = standalone 100, not a multiplier
+                    current += curTens + 100
+                    curTens  = 0
+                }
+                hundredsMap.containsKey(token) -> {
+                    // HR compound hundreds: dvjesto=200, tristo=300, etc.
+                    current += curTens + (hundredsMap[token] ?: 0)
+                    curTens  = 0
                 }
                 multipliers.containsKey(token) -> {
-                    val base = (total + curTens).let { if (it == 0) 1 else it }
-                    total  = base * (multipliers[token] ?: 1)
-                    curTens = 0
+                    // "tisuću"/"thousand" — flush current group into total
+                    val sub  = current + curTens
+                    total   += (if (sub == 0) 1 else sub) * (multipliers[token] ?: 1)
+                    current  = 0
+                    curTens  = 0
                 }
                 teens.containsKey(token) -> {
-                    total  += curTens + (teens[token] ?: 0)
-                    curTens = 0
+                    current += curTens + (teens[token] ?: 0)
+                    curTens  = 0
                 }
                 tensMap.containsKey(token) -> {
-                    total  += curTens
-                    curTens = tensMap[token] ?: 0
+                    current += curTens
+                    curTens  = tensMap[token] ?: 0
                 }
                 ones.containsKey(token) -> {
-                    total  += curTens + (ones[token] ?: 0)
-                    curTens = 0
+                    current += curTens + (ones[token] ?: 0)
+                    curTens  = 0
                 }
             }
         }
-        total += curTens
+        total += current + curTens
         return if (total > 0) total.toDouble() else null
     }
 

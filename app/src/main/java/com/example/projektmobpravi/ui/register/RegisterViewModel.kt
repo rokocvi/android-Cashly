@@ -1,10 +1,15 @@
 package com.example.projektmobpravi.ui.register
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.userProfileChangeRequest
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,7 +25,8 @@ data class RegisterUiState(
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     private val auth: FirebaseAuth,
-    private val firestore: FirebaseFirestore
+    private val firestore: FirebaseFirestore,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RegisterUiState())
@@ -49,12 +55,25 @@ class RegisterViewModel @Inject constructor(
             }
         }
 
+        if (!isOnline()) {
+            _uiState.value = _uiState.value.copy(
+                errorMessage = "Nema internetske veze. Provjeri konekciju i pokušaj ponovo."
+            )
+            return
+        }
+
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
             try {
                 // Kreiraj korisnika u Firebase Auth
                 val result = auth.createUserWithEmailAndPassword(email, password).await()
-                val userId = result.user?.uid ?: throw Exception("Greška pri kreiranju računa")
+                val firebaseUser = result.user ?: throw Exception("Greška pri kreiranju računa")
+                val userId = firebaseUser.uid
+
+                // Postavi displayName u Firebase Auth
+                firebaseUser.updateProfile(
+                    userProfileChangeRequest { displayName = username }
+                ).await()
 
                 // Spremi korisničke podatke u Firestore
                 val user = hashMapOf(
@@ -76,5 +95,11 @@ class RegisterViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.value = _uiState.value.copy(errorMessage = null)
+    }
+
+    private fun isOnline(): Boolean {
+        val cm = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return false) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 }

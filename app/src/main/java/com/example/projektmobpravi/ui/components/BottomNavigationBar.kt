@@ -27,8 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.projektmobpravi.ui.navigation.Screen
-import com.example.projektmobpravi.ui.theme.DeepGreen
-import com.example.projektmobpravi.ui.theme.PrimaryContainer
 import com.example.projektmobpravi.ui.theme.SurfaceCard
 import com.example.projektmobpravi.ui.theme.TextMuted
 
@@ -113,11 +111,11 @@ fun BottomNavigationBar(navController: NavHostController) {
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor   = DeepGreen,
-                    selectedTextColor   = DeepGreen,
+                    selectedIconColor   = MaterialTheme.colorScheme.primary,
+                    selectedTextColor   = MaterialTheme.colorScheme.primary,
                     unselectedIconColor = TextMuted,
                     unselectedTextColor = TextMuted,
-                    indicatorColor      = PrimaryContainer
+                    indicatorColor      = MaterialTheme.colorScheme.primaryContainer
                 )
             )
         }

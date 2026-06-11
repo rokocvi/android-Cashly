@@ -197,7 +197,7 @@ fun HomeScreen(navController: NavHostController) {
                                 color = TextDark
                             )
                             Text(
-                                text  = "${uiState.transactions.size} ${strings.itemsSuffix}",
+                                text  = "${if (uiState.searchQuery.isEmpty()) uiState.totalCount else uiState.transactions.size} ${strings.itemsSuffix}",
                                 style = MaterialTheme.typography.labelMedium,
                                 color = TextMuted
                             )
@@ -228,6 +228,27 @@ fun HomeScreen(navController: NavHostController) {
                                     )
                                 }
                             )
+                        }
+
+                        if (uiState.searchQuery.isEmpty() && uiState.transactions.size < uiState.totalCount) {
+                            item {
+                                val remaining = uiState.totalCount - uiState.transactions.size
+                                OutlinedButton(
+                                    onClick  = { viewModel.loadMore() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    shape    = RoundedCornerShape(12.dp),
+                                    colors   = ButtonDefaults.outlinedButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.primary
+                                    )
+                                ) {
+                                    Text(
+                                        text  = "${strings.loadMore} ($remaining)",
+                                        style = MaterialTheme.typography.labelLarge
+                                    )
+                                }
+                            }
                         }
                     }
                 }

@@ -125,14 +125,22 @@ class HomeViewModel @Inject constructor(
     fun setSearchQuery(query: String) {
         _uiState.value = _uiState.value.copy(
             searchQuery  = query,
-            transactions = applyFilter(allTransactions, query)
+            transactions = applyFilter(allTransactions, query, _uiState.value.displayCount)
         )
     }
 
-    private fun applyFilter(transactions: List<TransactionEntity>, query: String): List<TransactionEntity> {
+    fun loadMore() {
+        val newCount = _uiState.value.displayCount + PAGE_SIZE
+        _uiState.value = _uiState.value.copy(
+            displayCount = newCount,
+            transactions = applyFilter(allTransactions, _uiState.value.searchQuery, newCount)
+        )
+    }
+
+    private fun applyFilter(transactions: List<TransactionEntity>, query: String, displayCount: Int): List<TransactionEntity> {
         val trimmed = query.trim().lowercase()
         return if (trimmed.isEmpty()) {
-            transactions.take(10)
+            transactions.take(displayCount)
         } else {
             transactions.filter { t ->
                 t.note.lowercase().contains(trimmed) ||

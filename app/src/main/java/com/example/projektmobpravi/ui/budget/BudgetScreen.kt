@@ -31,6 +31,7 @@ import com.example.projektmobpravi.ui.theme.*
 fun BudgetScreen(navController: NavHostController) {
     val viewModel: BudgetViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     var editingCategory by remember { mutableStateOf<Category?>(null) }
 
@@ -65,7 +66,7 @@ fun BudgetScreen(navController: NavHostController) {
                 item { BudgetSummaryCard(items = uiState.items) }
                 item {
                     Text(
-                        text     = "Budgeti po kategoriji",
+                        text     = strings.budgetCategorySection,
                         style    = MaterialTheme.typography.titleMedium,
                         color    = TextDark,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -84,6 +85,7 @@ fun BudgetScreen(navController: NavHostController) {
 
 @Composable
 fun BudgetHeader() {
+    val strings = LocalStrings.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -111,12 +113,12 @@ fun BudgetHeader() {
                 .padding(horizontal = 20.dp, vertical = 24.dp)
         ) {
             Text(
-                text  = "Budgeti",
+                text  = strings.navBudget,
                 style = MaterialTheme.typography.headlineMedium,
                 color = TextOnDark
             )
             Text(
-                text  = "Postavi limite po kategoriji",
+                text  = strings.budgetSubtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextOnDark.copy(alpha = 0.65f)
             )
@@ -126,6 +128,7 @@ fun BudgetHeader() {
 
 @Composable
 fun BudgetSummaryCard(items: List<BudgetItem>) {
+    val strings = LocalStrings.current
     val budgetedItems     = items.filter { it.limitAmount != null }
     val totalBudget       = budgetedItems.sumOf { it.limitAmount ?: 0.0 }
     val totalSpent        = budgetedItems.sumOf { it.spentThisMonth }
@@ -146,7 +149,7 @@ fun BudgetSummaryCard(items: List<BudgetItem>) {
                 .padding(24.dp)
         ) {
             Text(
-                text  = "Ukupni budget ovaj mjesec",
+                text  = strings.budgetSummaryTitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = TextOnDark.copy(alpha = 0.65f)
             )
@@ -178,9 +181,9 @@ fun BudgetSummaryCard(items: List<BudgetItem>) {
             Text(
                 text  = when {
                     overBudgetCount > 0   ->
-                        "⚠️ $overBudgetCount ${if (overBudgetCount == 1) "kategorija" else "kategorije"} prešla limit"
-                    budgetedItems.isEmpty() -> "💡 Dodiri kategoriju za postavljanje limita"
-                    else                  -> "✅ Unutar budgeta"
+                        "⚠️ $overBudgetCount ${if (overBudgetCount == 1) strings.budgetOverLimitSingular else strings.budgetOverLimitPlural}"
+                    budgetedItems.isEmpty() -> strings.budgetSetLimitHint
+                    else                  -> strings.budgetWithinBudget
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = when {
@@ -195,6 +198,7 @@ fun BudgetSummaryCard(items: List<BudgetItem>) {
 
 @Composable
 fun BudgetCategoryCard(item: BudgetItem, onClick: () -> Unit) {
+    val strings = LocalStrings.current
     val categoryColor = getCategoryColor(item.category.displayName)
     val progressColor = when {
         item.isOverBudget     -> ErrorRed
@@ -240,7 +244,7 @@ fun BudgetCategoryCard(item: BudgetItem, onClick: () -> Unit) {
                     verticalAlignment     = Alignment.CenterVertically
                 ) {
                     Text(
-                        text  = item.category.displayName,
+                        text  = strings.categoryDisplayName(item.category.displayName),
                         style = MaterialTheme.typography.titleMedium,
                         color = TextDark
                     )
@@ -252,7 +256,7 @@ fun BudgetCategoryCard(item: BudgetItem, onClick: () -> Unit) {
                         )
                     } else {
                         Text(
-                            text  = "€%.2f  —  nema limita".format(item.spentThisMonth),
+                            text  = strings.budgetNoLimitFormat.format(item.spentThisMonth),
                             style = MaterialTheme.typography.labelSmall,
                             color = TextMuted
                         )
@@ -273,7 +277,7 @@ fun BudgetCategoryCard(item: BudgetItem, onClick: () -> Unit) {
                     if (item.isOverBudget) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text  = "Prekoračen za €%.2f".format(item.spentThisMonth - item.limitAmount),
+                            text  = strings.budgetExceededByFormat.format(item.spentThisMonth - item.limitAmount),
                             style = MaterialTheme.typography.labelSmall,
                             color = ErrorRed
                         )
@@ -281,7 +285,7 @@ fun BudgetCategoryCard(item: BudgetItem, onClick: () -> Unit) {
                 } else {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text  = "Dodiri za postavljanje limita",
+                        text  = strings.budgetTapToSet,
                         style = MaterialTheme.typography.labelSmall,
                         color = TextMuted.copy(alpha = 0.55f)
                     )
@@ -298,6 +302,7 @@ fun BudgetEditDialog(
     onConfirm: (Double?) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalStrings.current
     var inputText by remember { mutableStateOf(currentLimit?.let { "%.2f".format(it) } ?: "") }
     val isValid = inputText.toDoubleOrNull()?.let { it > 0 } ?: false
 
@@ -305,14 +310,14 @@ fun BudgetEditDialog(
         onDismissRequest = onDismiss,
         title            = {
             Text(
-                text  = "${getCategoryEmoji(category.displayName)} ${category.displayName}",
+                text  = "${getCategoryEmoji(category.displayName)} ${strings.categoryDisplayName(category.displayName)}",
                 style = MaterialTheme.typography.titleLarge
             )
         },
         text = {
             Column {
                 Text(
-                    text  = "Postavi mjesečni limit za ovu kategoriju:",
+                    text  = strings.budgetDialogSetLimit,
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted
                 )
@@ -336,17 +341,17 @@ fun BudgetEditDialog(
                 onClick  = { onConfirm(inputText.toDoubleOrNull()) },
                 enabled  = isValid
             ) {
-                Text("Spremi", color = if (isValid) MaterialTheme.colorScheme.primary else TextMuted)
+                Text(strings.budgetSave, color = if (isValid) MaterialTheme.colorScheme.primary else TextMuted)
             }
         },
         dismissButton = {
             Row {
                 if (currentLimit != null) {
                     TextButton(onClick = { onConfirm(null) }) {
-                        Text("Ukloni limit", color = ErrorRed)
+                        Text(strings.budgetRemoveLimit, color = ErrorRed)
                     }
                 }
-                TextButton(onClick = onDismiss) { Text("Odustani") }
+                TextButton(onClick = onDismiss) { Text(strings.cancel) }
             }
         }
     )

@@ -71,6 +71,7 @@ fun AddTransactionScreen(
     val viewModel: AddTransactionViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val strings = LocalStrings.current
 
     val savedScannedAmount   = navController.currentBackStackEntry
         ?.savedStateHandle?.get<String>("scannedAmount")
@@ -124,15 +125,15 @@ fun AddTransactionScreen(
                     isListening = false
                     if (text.isNotEmpty()) {
                         voiceResult = VoiceParser.parse(text, uiState.customCategories)
-                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                        if (voiceResult == null) voiceError = "${strings.voiceNotRecognizedPrefix} \"$text\""
                     } else {
-                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                        voiceError = strings.voiceNoSpeech
                     }
                 },
                 onError = { msg -> isListening = false; voiceError = msg }
             )
         } else {
-            voiceError = "Dozvola za mikrofon nije odobrena"
+            voiceError = strings.voiceNoPerm
         }
     }
 
@@ -171,9 +172,9 @@ fun AddTransactionScreen(
                     isListening = false
                     if (text.isNotEmpty()) {
                         voiceResult = VoiceParser.parse(text, uiState.customCategories)
-                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                        if (voiceResult == null) voiceError = "${strings.voiceNotRecognizedPrefix} \"$text\""
                     } else {
-                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                        voiceError = strings.voiceNoSpeech
                     }
                 },
                 onError = { msg -> isListening = false; voiceError = msg }
@@ -246,7 +247,7 @@ fun AddTransactionScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text  = if (uiState.isEditMode) "Uredi transakciju" else "Nova transakcija",
+                        text  = if (uiState.isEditMode) strings.editTransaction else strings.addNewTransaction,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextOnDark
                     )
@@ -273,7 +274,7 @@ fun AddTransactionScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text  = "Iznos",
+                            text  = strings.amountLabel,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
@@ -346,7 +347,7 @@ fun AddTransactionScreen(
                                 ) {
                                     Icon(Icons.Default.CameraAlt, null, modifier = Modifier.size(16.dp))
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Skeniraj", style = MaterialTheme.typography.labelLarge)
+                                    Text(strings.scanButton, style = MaterialTheme.typography.labelLarge)
                                 }
                                 OutlinedButton(
                                     onClick = {
@@ -361,9 +362,9 @@ fun AddTransactionScreen(
                                                     isListening = false
                                                     if (text.isNotEmpty()) {
                                                         voiceResult = VoiceParser.parse(text, uiState.customCategories)
-                                                        if (voiceResult == null) voiceError = "Nije prepoznat iznos iz: \"$text\""
+                                                        if (voiceResult == null) voiceError = "${strings.voiceNotRecognizedPrefix} \"$text\""
                                                     } else {
-                                                        voiceError = "Govor nije prepoznat, pokušaj ponovo"
+                                                        voiceError = strings.voiceNoSpeech
                                                     }
                                                 },
                                                 onError = { msg -> isListening = false; voiceError = msg }
@@ -389,7 +390,7 @@ fun AddTransactionScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        text  = if (isListening) "Slušam..." else "Glasovni",
+                                        text  = if (isListening) strings.voiceListening else strings.voiceButton,
                                         style = MaterialTheme.typography.labelLarge,
                                         color = MintGreen.copy(alpha = if (isListening) pulseAlpha else 1f)
                                     )
@@ -411,7 +412,7 @@ fun AddTransactionScreen(
                                         .clickable { showVoiceHelp = true }
                                 )
                                 Text(
-                                    text  = "Jezik:",
+                                    text  = strings.voiceLangLabel,
                                     style = MaterialTheme.typography.labelSmall,
                                     color = TextMuted
                                 )
@@ -502,7 +503,7 @@ fun AddTransactionScreen(
                                         .background(SuccessGreen)
                                 )
                                 Text(
-                                    text  = "Iznos prepoznat s računa",
+                                    text  = strings.amountFromScan,
                                     style = MaterialTheme.typography.labelMedium,
                                     color = SuccessGreen
                                 )
@@ -525,13 +526,14 @@ fun AddTransactionScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text  = "Kategorija",
+                            text  = strings.categoryLabel,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
 
                         data class GridItem(
-                            val name: String,
+                            val key: String,
+                            val displayName: String,
                             val emoji: String,
                             val isAddNew: Boolean = false,
                             val onClick: () -> Unit
@@ -539,16 +541,16 @@ fun AddTransactionScreen(
 
                         val gridItems = buildList<GridItem> {
                             Category.values().forEach { cat ->
-                                add(GridItem(cat.displayName, cat.emoji) {
+                                add(GridItem(cat.displayName, strings.categoryDisplayName(cat.displayName), cat.emoji) {
                                     viewModel.selectCategory(cat)
                                 })
                             }
                             uiState.customCategories.forEach { cat ->
-                                add(GridItem(cat.name, cat.emoji) {
+                                add(GridItem(cat.name, cat.name, cat.emoji) {
                                     viewModel.selectCustomCategory(cat.name, cat.emoji)
                                 })
                             }
-                            add(GridItem("Nova", "➕", isAddNew = true) {
+                            add(GridItem("", strings.addNewCategoryLabel, "➕", isAddNew = true) {
                                 navController.navigate(Screen.CreateCategory.route)
                             })
                         }
@@ -560,9 +562,9 @@ fun AddTransactionScreen(
                             ) {
                                 rowItems.forEach { item ->
                                     val isSelected = !item.isAddNew &&
-                                        uiState.selectedCategoryName == item.name
+                                        uiState.selectedCategoryName == item.key
                                     val isCustom = !item.isAddNew &&
-                                        uiState.customCategories.any { it.name == item.name }
+                                        uiState.customCategories.any { it.name == item.key }
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
@@ -585,7 +587,7 @@ fun AddTransactionScreen(
                                             .combinedClickable(
                                                 onClick     = { item.onClick() },
                                                 onLongClick = {
-                                                    if (isCustom) categoryToDelete = item.name
+                                                    if (isCustom) categoryToDelete = item.key
                                                 }
                                             )
                                             .padding(8.dp),
@@ -594,7 +596,7 @@ fun AddTransactionScreen(
                                         Text(text = item.emoji, style = MaterialTheme.typography.bodyLarge)
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text  = item.name,
+                                            text  = item.displayName,
                                             style = MaterialTheme.typography.labelSmall,
                                             color = when {
                                                 isSelected    -> TextOnDark
@@ -628,14 +630,14 @@ fun AddTransactionScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text  = "Napomena",
+                            text  = strings.noteLabel,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
                         OutlinedTextField(
                             value         = note,
                             onValueChange = { note = it },
-                            label         = { Text("npr. Konzum, benzinska...") },
+                            label         = { Text(strings.notePlaceholder) },
                             modifier      = Modifier.fillMaxWidth(),
                             shape         = RoundedCornerShape(12.dp),
                             colors        = OutlinedTextFieldDefaults.colors(
@@ -683,7 +685,7 @@ fun AddTransactionScreen(
                         )
                     } else {
                         Text(
-                            text  = if (uiState.isEditMode) "Spremi promjene" else "Dodaj transakciju",
+                            text  = if (uiState.isEditMode) strings.saveChanges else strings.addTransactionButton,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextOnDark
                         )
@@ -704,7 +706,7 @@ fun AddTransactionScreen(
             },
             title = {
                 Text(
-                    text  = "Glasovni unos",
+                    text  = strings.voiceHelpTitle,
                     style = MaterialTheme.typography.titleMedium,
                     color = TextDark
                 )
@@ -712,12 +714,12 @@ fun AddTransactionScreen(
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        text  = "Izgovori iznos i kategoriju. Aplikacija automatski prepoznaje oboje.",
+                        text  = strings.voiceHelpDesc,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
                     VoiceHelpSection(
-                        title   = "Primjeri — Hrvatski",
+                        title   = strings.voiceExamplesCroatian,
                         examples = listOf(
                             "\"dvadeset pet eura, hrana\"",
                             "\"pedeset prijevoz\"",
@@ -726,7 +728,7 @@ fun AddTransactionScreen(
                         )
                     )
                     VoiceHelpSection(
-                        title    = "Primjeri — English",
+                        title    = strings.voiceExamplesEnglish,
                         examples = listOf(
                             "\"twenty five euros, food\"",
                             "\"fifty transport\"",
@@ -743,7 +745,7 @@ fun AddTransactionScreen(
                     ) {
                         Text("💡", style = MaterialTheme.typography.bodySmall)
                         Text(
-                            text  = "Za decimale izgovori broj s točkom: \"25.50 hrana\"",
+                            text  = strings.voiceDecimalTip,
                             style = MaterialTheme.typography.labelSmall,
                             color = TextDark
                         )
@@ -752,7 +754,7 @@ fun AddTransactionScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showVoiceHelp = false }) {
-                    Text("Razumijem", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(strings.voiceHelpOk, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 }
             }
         )
@@ -761,15 +763,15 @@ fun AddTransactionScreen(
     categoryToDelete?.let { name ->
         AlertDialog(
             onDismissRequest = { categoryToDelete = null },
-            title            = { Text("Obriši kategoriju") },
-            text             = { Text("Sigurno želiš obrisati kategoriju \"$name\"?") },
+            title            = { Text(strings.deleteCategoryTitle) },
+            text             = { Text(strings.deleteCategoryMessage.format(name)) },
             confirmButton    = {
                 TextButton(onClick = { viewModel.deleteCustomCategory(name); categoryToDelete = null }) {
-                    Text("Obriši", color = ErrorRed)
+                    Text(strings.delete, color = ErrorRed)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { categoryToDelete = null }) { Text("Odustani") }
+                TextButton(onClick = { categoryToDelete = null }) { Text(strings.cancel) }
             }
         )
     }
@@ -802,6 +804,7 @@ private fun VoiceResultBanner(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalStrings.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -817,7 +820,7 @@ private fun VoiceResultBanner(
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
-                text  = "Prepoznato iz glasa",
+                text  = strings.voiceRecognizedLabel,
                 style = MaterialTheme.typography.labelSmall,
                 color = TextMuted
             )

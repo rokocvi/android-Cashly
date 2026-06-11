@@ -12,21 +12,25 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,7 +52,6 @@ import com.example.projektmobpravi.data.local.entity.TransactionEntity
 import com.example.projektmobpravi.ui.components.BottomNavigationBar
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
-import com.example.projektmobpravi.ui.theme.LocalTheme
 import com.example.projektmobpravi.util.ShakeDetector
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -62,6 +65,7 @@ private var shakeTipShown = false
 fun HomeScreen(navController: NavHostController) {
     val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val strings = LocalStrings.current
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -105,15 +109,15 @@ fun HomeScreen(navController: NavHostController) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick          = { navController.navigate(Screen.AddTransaction.addRoute) },
-                containerColor   = MaterialTheme.colorScheme.primary,
-                contentColor     = TextOnDark,
-                shape            = RoundedCornerShape(16.dp),
-                modifier         = Modifier.size(56.dp)
+                onClick        = { navController.navigate(Screen.AddTransaction.addRoute) },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor   = TextOnDark,
+                shape          = RoundedCornerShape(16.dp),
+                modifier       = Modifier.size(56.dp)
             ) {
                 Icon(
                     imageVector        = Icons.Default.Add,
-                    contentDescription = "Dodaj transakciju",
+                    contentDescription = strings.navAdd,
                     modifier           = Modifier.size(24.dp)
                 )
             }
@@ -123,144 +127,159 @@ fun HomeScreen(navController: NavHostController) {
     ) { paddingValues ->
 
         Box(modifier = Modifier.fillMaxSize()) {
-        if (uiState.isLoading) {
-            Box(
-                modifier        = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
-            }
-        } else {
-            LazyColumn(
-                modifier       = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentPadding = PaddingValues(bottom = 24.dp)
-            ) {
-                item {
-                    HomeHeader(
-                        username = uiState.username,
-                        onLogout = { viewModel.logout() }
-                    )
+            if (uiState.isLoading) {
+                Box(
+                    modifier         = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp)
                 }
+            } else {
+                LazyColumn(
+                    modifier       = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues),
+                    contentPadding = PaddingValues(bottom = 24.dp)
+                ) {
+                    item {
+                        HomeHeader(
+                            username = uiState.username,
+                            onLogout = { viewModel.logout() }
+                        )
+                    }
 
-                item {
-                    AnimatedVisibility(
-                        visible = uiState.isOffline,
-                        enter   = expandVertically(),
-                        exit    = shrinkVertically()
-                    ) {
+                    item {
+                        AnimatedVisibility(
+                            visible = uiState.isOffline,
+                            enter   = expandVertically(),
+                            exit    = shrinkVertically()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(AccentGold.copy(alpha = 0.12f))
+                                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                                verticalAlignment     = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector        = Icons.Default.CloudOff,
+                                    contentDescription = null,
+                                    tint               = AccentGold,
+                                    modifier           = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text  = strings.offlineBanner,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = AccentGold
+                                )
+                            }
+                        }
+                    }
+
+                    item { TotalSpendingCard(total = uiState.totalThisMonth) }
+
+                    item { CategorySummaryRow(categoryTotals = uiState.categoryTotals) }
+
+                    item {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(AccentGold.copy(alpha = 0.12f))
-                                .padding(horizontal = 20.dp, vertical = 10.dp),
-                            verticalAlignment     = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 8.dp, bottom = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment     = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector        = Icons.Default.CloudOff,
-                                contentDescription = null,
-                                tint               = AccentGold,
-                                modifier           = Modifier.size(16.dp)
+                            Text(
+                                text  = if (uiState.searchQuery.isNotEmpty()) strings.searchResults
+                                        else strings.recentTransactions,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = TextDark
                             )
                             Text(
-                                text  = "Nema internetske veze — prikazuju se lokalni podaci",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = AccentGold
+                                text  = "${uiState.transactions.size} ${strings.itemsSuffix}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = TextMuted
+                            )
+                        }
+                    }
+
+                    item {
+                        TransactionSearchBar(
+                            query         = uiState.searchQuery,
+                            onQueryChange = { viewModel.setSearchQuery(it) },
+                            modifier      = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                        )
+                    }
+
+                    if (uiState.transactions.isEmpty()) {
+                        item { EmptyTransactionsCard() }
+                    } else {
+                        items(
+                            items = uiState.transactions,
+                            key   = { it.id }
+                        ) { transaction ->
+                            TransactionItem(
+                                transaction = transaction,
+                                onDelete    = { viewModel.deleteTransaction(transaction) },
+                                onEdit      = {
+                                    navController.navigate(
+                                        Screen.AddTransaction.editRoute(transaction.id)
+                                    )
+                                }
                             )
                         }
                     }
                 }
-
-                item { TotalSpendingCard(total = uiState.totalThisMonth) }
-
-                item { CategorySummaryRow(categoryTotals = uiState.categoryTotals) }
-
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp)
-                            .padding(top = 8.dp, bottom = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment     = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text  = "Zadnje transakcije",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = TextDark
-                        )
-                        Text(
-                            text  = "${uiState.transactions.size} stavki",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = TextMuted
-                        )
-                    }
-                }
-
-                if (uiState.transactions.isEmpty()) {
-                    item { EmptyTransactionsCard() }
-                } else {
-                    items(
-                        items = uiState.transactions,
-                        key   = { it.id }
-                    ) { transaction ->
-                        TransactionItem(
-                            transaction = transaction,
-                            onDelete    = { viewModel.deleteTransaction(transaction) },
-                            onEdit      = {
-                                navController.navigate(
-                                    Screen.AddTransaction.editRoute(transaction.id)
-                                )
-                            }
-                        )
-                    }
-                }
             }
-        }
 
-        AnimatedVisibility(
-            visible  = showShakeTip,
-            enter    = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
-            exit     = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(
-                    start  = 16.dp,
-                    end    = 80.dp,
-                    bottom = paddingValues.calculateBottomPadding() + 16.dp
-                )
-        ) {
-            Row(
+            AnimatedVisibility(
+                visible  = showShakeTip,
+                enter    = slideInVertically(initialOffsetY = { it / 2 }) + fadeIn(),
+                exit     = slideOutVertically(targetOffsetY = { it / 2 }) + fadeOut(),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFF1A1040).copy(alpha = 0.93f))
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                verticalAlignment     = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .align(Alignment.BottomStart)
+                    .padding(
+                        start   = 16.dp,
+                        end     = 80.dp,
+                        bottom  = paddingValues.calculateBottomPadding() + 16.dp
+                    )
             ) {
-                Text(text = "📳", fontSize = 14.sp)
-                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                    Text(
-                        text  = "Protresite → skeniranje",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White
-                    )
-                    Text(
-                        text  = "Dvaput → glasovni unos 🎤",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White.copy(alpha = 0.75f)
-                    )
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFF1A1040).copy(alpha = 0.93f))
+                        .padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(text = "📳", fontSize = 14.sp)
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text  = strings.shakeTipShake,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White
+                        )
+                        Text(
+                            text  = strings.shakeTipDouble,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+                    }
                 }
             }
-        }
         } // outer Box
     }
 }
 
+// ── Header ────────────────────────────────────────────
+
 @Composable
 fun HomeHeader(username: String, onLogout: () -> Unit) {
+    val strings  = LocalStrings.current
+    val theme    = LocalTheme.current
+    val language = LocalLanguage.current
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -281,7 +300,6 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                 radius = 110.dp.toPx(),
                 center = Offset(-35.dp.toPx(), size.height * 0.85f)
             )
-            // Suptilni zlatni glow na dnu
             drawCircle(
                 color  = Color(0xFFF79009).copy(alpha = 0.07f),
                 radius = 90.dp.toPx(),
@@ -304,7 +322,6 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                     verticalAlignment     = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    // Avatar s inicijalima
                     Box(
                         modifier         = Modifier
                             .size(46.dp)
@@ -322,7 +339,7 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
 
                     Column {
                         Text(
-                            text  = "Dobar dan,",
+                            text  = strings.greeting,
                             style = MaterialTheme.typography.bodySmall,
                             color = TextOnDark.copy(alpha = 0.65f)
                         )
@@ -335,9 +352,24 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                 }
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    val theme = LocalTheme.current
+                    // Language toggle
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White.copy(alpha = 0.12f))
+                            .clickable { language.toggle() }
+                            .padding(horizontal = 10.dp, vertical = 11.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text       = if (language.isEnglish) "HR" else "EN",
+                            fontSize   = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color      = TextOnDark
+                        )
+                    }
 
-                    // Tema toggle (sunce / mjesec)
+                    // Dark mode toggle
                     Box(
                         modifier         = Modifier
                             .size(40.dp)
@@ -347,15 +379,15 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector        = if (theme.isDark)
-                                Icons.Default.LightMode else Icons.Default.DarkMode,
-                            contentDescription = if (theme.isDark) "Svjetla tema" else "Tamna tema",
+                            imageVector        = if (theme.isDark) Icons.Default.LightMode
+                                                 else Icons.Default.DarkMode,
+                            contentDescription = null,
                             tint               = TextOnDark.copy(alpha = 0.9f),
                             modifier           = Modifier.size(18.dp)
                         )
                     }
 
-                    // Logout gumb
+                    // Logout
                     Box(
                         modifier         = Modifier
                             .size(40.dp)
@@ -366,7 +398,7 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
                     ) {
                         Icon(
                             imageVector        = Icons.AutoMirrored.Filled.Logout,
-                            contentDescription = "Odjava",
+                            contentDescription = null,
                             tint               = TextOnDark.copy(alpha = 0.9f),
                             modifier           = Modifier.size(18.dp)
                         )
@@ -376,8 +408,9 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            val dateLocale = if (language.isEnglish) Locale.ENGLISH else Locale("hr")
             Text(
-                text  = SimpleDateFormat("EEEE, d. MMMM yyyy.", Locale("hr")).format(Date()),
+                text  = SimpleDateFormat("EEEE, d. MMMM yyyy.", dateLocale).format(Date()),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextOnDark.copy(alpha = 0.55f)
             )
@@ -385,14 +418,17 @@ fun HomeHeader(username: String, onLogout: () -> Unit) {
     }
 }
 
+// ── Total Card ────────────────────────────────────────
+
 @Composable
 fun TotalSpendingCard(total: Double) {
+    val strings = LocalStrings.current
     Card(
-        modifier = Modifier
+        modifier  = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 16.dp),
-        shape   = RoundedCornerShape(20.dp),
-        colors  = CardDefaults.cardColors(containerColor = SurfaceCard),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Row(
@@ -404,7 +440,7 @@ fun TotalSpendingCard(total: Double) {
         ) {
             Column {
                 Text(
-                    text  = "Potrošnja ovaj mjesec",
+                    text  = strings.spendingThisMonth,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted
                 )
@@ -427,7 +463,7 @@ fun TotalSpendingCard(total: Double) {
                             .background(SuccessGreen)
                     )
                     Text(
-                        text  = "Aktivno praćenje",
+                        text  = strings.activeTracking,
                         style = MaterialTheme.typography.labelSmall,
                         color = TextMuted
                     )
@@ -452,8 +488,11 @@ fun TotalSpendingCard(total: Double) {
     }
 }
 
+// ── Category Summary ──────────────────────────────────
+
 @Composable
 fun CategorySummaryRow(categoryTotals: Map<String, Double>) {
+    val strings = LocalStrings.current
     val topCategories = categoryTotals.entries
         .sortedByDescending { it.value }
         .take(3)
@@ -466,7 +505,7 @@ fun CategorySummaryRow(categoryTotals: Map<String, Double>) {
             .padding(horizontal = 16.dp)
     ) {
         Text(
-            text     = "Top kategorije",
+            text     = strings.topCategories,
             style    = MaterialTheme.typography.titleMedium,
             color    = TextDark,
             modifier = Modifier.padding(bottom = 12.dp)
@@ -493,8 +532,9 @@ fun CategoryMiniCard(
     amount: Double,
     modifier: Modifier = Modifier
 ) {
-    val emoji = getCategoryEmoji(category)
-    val color = getCategoryColor(category)
+    val strings = LocalStrings.current
+    val emoji   = getCategoryEmoji(category)
+    val color   = getCategoryColor(category)
 
     Card(
         modifier  = modifier,
@@ -503,10 +543,10 @@ fun CategoryMiniCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(
-            modifier             = Modifier
+            modifier            = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 14.dp, horizontal = 8.dp),
-            horizontalAlignment  = Alignment.CenterHorizontally
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Box(
                 modifier         = Modifier
@@ -525,7 +565,7 @@ fun CategoryMiniCard(
                 color      = TextDark
             )
             Text(
-                text     = category,
+                text     = strings.categoryDisplayName(category),
                 style    = MaterialTheme.typography.labelSmall,
                 color    = TextMuted,
                 maxLines = 1,
@@ -535,30 +575,33 @@ fun CategoryMiniCard(
     }
 }
 
+// ── Transaction Item ──────────────────────────────────
+
 @Composable
 fun TransactionItem(
     transaction: TransactionEntity,
     onDelete: () -> Unit,
     onEdit: () -> Unit = {}
 ) {
+    val strings = LocalStrings.current
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title            = { Text("Obriši transakciju") },
-            text             = { Text("Jesi li siguran da želiš obrisati ovu transakciju?") },
+            title            = { Text(strings.deleteTransactionTitle) },
+            text             = { Text(strings.deleteTransactionMessage) },
             confirmButton    = {
                 TextButton(onClick = {
                     onDelete()
                     showDeleteDialog = false
                 }) {
-                    Text("Obriši", color = ErrorRed)
+                    Text(strings.delete, color = ErrorRed)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Odustani")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -573,7 +616,6 @@ fun TransactionItem(
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-            // Obojana lijeva traka po boji kategorije
             Box(
                 modifier = Modifier
                     .width(4.dp)
@@ -586,106 +628,106 @@ fun TransactionItem(
                     .padding(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-            // Squircle ikona kategorije
-            Box(
-                modifier         = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(getCategoryColor(transaction.category).copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text     = getCategoryEmoji(transaction.category),
-                    fontSize = 22.sp
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Naziv i datum
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text     = transaction.note.ifBlank { transaction.category },
-                    style    = MaterialTheme.typography.titleMedium,
-                    color    = TextDark,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Row(
-                    verticalAlignment     = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Box(
+                    modifier         = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(getCategoryColor(transaction.category).copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(getCategoryColor(transaction.category).copy(alpha = 0.10f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Text(
+                        text     = getCategoryEmoji(transaction.category),
+                        fontSize = 22.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text     = transaction.note.ifBlank { strings.categoryDisplayName(transaction.category) },
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = TextDark,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(getCategoryColor(transaction.category).copy(alpha = 0.10f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text  = strings.categoryDisplayName(transaction.category),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = getCategoryColor(transaction.category)
+                            )
+                        }
                         Text(
-                            text  = transaction.category,
+                            text  = "·",
                             style = MaterialTheme.typography.labelSmall,
-                            color = getCategoryColor(transaction.category)
+                            color = TextMuted
+                        )
+                        Text(
+                            text  = SimpleDateFormat("d. MMM", if (LocalLanguage.current.isEnglish) Locale.ENGLISH else Locale("hr"))
+                                        .format(Date(transaction.date)),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = TextMuted
                         )
                     }
-                    Text(
-                        text  = "·",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted
-                    )
-                    Text(
-                        text  = SimpleDateFormat("d. MMM", Locale("hr"))
-                            .format(Date(transaction.date)),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = TextMuted
-                    )
                 }
-            }
 
-            Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
 
-            // Iznos i akcije
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text  = "-€%.2f".format(transaction.amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = ErrorRed
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(
-                        imageVector        = Icons.Default.Edit,
-                        contentDescription = "Uredi",
-                        tint               = TextMuted.copy(alpha = 0.45f),
-                        modifier           = Modifier
-                            .size(16.dp)
-                            .clickable { onEdit() }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text  = "-€%.2f".format(transaction.amount),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ErrorRed
                     )
-                    Icon(
-                        imageVector        = Icons.Default.Delete,
-                        contentDescription = "Obriši",
-                        tint               = TextMuted.copy(alpha = 0.45f),
-                        modifier           = Modifier
-                            .size(16.dp)
-                            .clickable { showDeleteDialog = true }
-                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(
+                            imageVector        = Icons.Default.Edit,
+                            contentDescription = null,
+                            tint               = TextMuted.copy(alpha = 0.45f),
+                            modifier           = Modifier
+                                .size(16.dp)
+                                .clickable { onEdit() }
+                        )
+                        Icon(
+                            imageVector        = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint               = TextMuted.copy(alpha = 0.45f),
+                            modifier           = Modifier
+                                .size(16.dp)
+                                .clickable { showDeleteDialog = true }
+                        )
+                    }
                 }
-            }
             }
         }
     }
 }
 
+// ── Empty State ───────────────────────────────────────
+
 @Composable
 fun EmptyTransactionsCard() {
+    val strings = LocalStrings.current
     Column(
-        modifier             = Modifier
+        modifier            = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(SurfaceCard)
             .padding(vertical = 40.dp, horizontal = 24.dp),
-        horizontalAlignment  = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
             modifier         = Modifier
@@ -698,19 +740,91 @@ fun EmptyTransactionsCard() {
         }
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            text  = "Nema transakcija",
+            text  = strings.noTransactions,
             style = MaterialTheme.typography.titleMedium,
             color = TextDark
         )
         Spacer(modifier = Modifier.height(6.dp))
         Text(
-            text      = "Dodaj svoju prvu transakciju\nklikom na gumb + ispod",
+            text      = strings.noTransactionsHint,
             style     = MaterialTheme.typography.bodySmall,
             color     = TextMuted,
             textAlign = TextAlign.Center
         )
     }
 }
+
+// ── Search Bar ────────────────────────────────────────
+
+@Composable
+fun TransactionSearchBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val strings = LocalStrings.current
+    val active  = query.isNotEmpty()
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(SurfaceCard)
+            .then(
+                if (active)
+                    Modifier.border(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                else
+                    Modifier.border(1.dp, TextMuted.copy(alpha = 0.18f), RoundedCornerShape(14.dp))
+            )
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Icon(
+            imageVector        = Icons.Default.Search,
+            contentDescription = null,
+            tint               = if (active) MaterialTheme.colorScheme.primary else TextMuted,
+            modifier           = Modifier.size(18.dp)
+        )
+        BasicTextField(
+            value         = query,
+            onValueChange = onQueryChange,
+            modifier      = Modifier.weight(1f),
+            singleLine    = true,
+            textStyle     = MaterialTheme.typography.bodyMedium.copy(color = TextDark),
+            decorationBox = { innerTextField ->
+                Box {
+                    if (query.isEmpty()) {
+                        Text(
+                            text  = strings.searchHint,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = TextMuted
+                        )
+                    }
+                    innerTextField()
+                }
+            }
+        )
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .size(20.dp)
+                    .clip(CircleShape)
+                    .background(TextMuted.copy(alpha = 0.12f))
+                    .clickable { onQueryChange("") },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector        = Icons.Default.Close,
+                    contentDescription = null,
+                    tint               = TextMuted,
+                    modifier           = Modifier.size(12.dp)
+                )
+            }
+        }
+    }
+}
+
+// ── Utilities ─────────────────────────────────────────
 
 fun getCategoryEmoji(category: String): String {
     return when (category) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,12 +45,28 @@ import com.example.projektmobpravi.ui.home.getCategoryColor
 import com.example.projektmobpravi.ui.home.getCategoryEmoji
 import com.example.projektmobpravi.ui.theme.*
 import com.github.mikephil.charting.charts.BarChart
+import com.github.mikephil.charting.charts.PieChart
 import com.github.mikephil.charting.components.XAxis
 import com.github.mikephil.charting.data.BarData
 import com.github.mikephil.charting.data.BarDataSet
 import com.github.mikephil.charting.data.BarEntry
+import com.github.mikephil.charting.data.PieData
+import com.github.mikephil.charting.data.PieDataSet
+import com.github.mikephil.charting.data.PieEntry
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter
 import com.github.mikephil.charting.formatter.ValueFormatter
+
+@Composable
+private fun Period.localizedName(): String {
+    val s = LocalStrings.current
+    return when (this) {
+        Period.THIS_WEEK -> s.periodThisWeek
+        Period.THIS_MONTH -> s.periodThisMonth
+        Period.LAST_MONTH -> s.periodLastMonth
+        Period.THIS_QUARTER -> s.periodThisQuarter
+        Period.THIS_YEAR -> s.periodThisYear
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -65,14 +82,16 @@ fun StatsScreen(navController: NavHostController) {
 
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val strings = LocalStrings.current
+
     LaunchedEffect(uiState.exportSuccess, uiState.exportError) {
         when {
             uiState.exportSuccess -> {
-                snackbarHostState.showSnackbar("CSV uspješno preuzet u Downloads")
+                snackbarHostState.showSnackbar(strings.csvExportSuccess)
                 viewModel.clearExportState()
             }
             uiState.exportError -> {
-                snackbarHostState.showSnackbar("Greška pri izvozu — pokušaj ponovo")
+                snackbarHostState.showSnackbar(strings.csvExportError)
                 viewModel.clearExportState()
             }
         }
@@ -86,12 +105,12 @@ fun StatsScreen(navController: NavHostController) {
                     viewModel.selectDate(datePickerState.selectedDateMillis)
                     showDatePicker = false
                 }) {
-                    Text("Odaberi", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                    Text(strings.select, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Odustani", color = TextMuted, style = MaterialTheme.typography.labelLarge)
+                    Text(strings.cancel, color = TextMuted, style = MaterialTheme.typography.labelLarge)
                 }
             },
             shape  = RoundedCornerShape(24.dp),
@@ -156,7 +175,16 @@ fun StatsScreen(navController: NavHostController) {
                 item { StatsSummaryRow(uiState = uiState) }
                 item {
                     Text(
-                        text     = "Potrošnja po kategorijama",
+                        text     = strings.expenseDistribution,
+                        style    = MaterialTheme.typography.titleMedium,
+                        color    = TextDark,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                    )
+                }
+                item { CategoryPieChartCard(categoryStats = uiState.categoryStats) }
+                item {
+                    Text(
+                        text     = strings.spendingByCategory,
                         style    = MaterialTheme.typography.titleMedium,
                         color    = TextDark,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -166,7 +194,7 @@ fun StatsScreen(navController: NavHostController) {
                 if (uiState.selectedDate == null) {
                     item {
                         Text(
-                            text     = "Zadnjih 7 dana",
+                            text     = strings.last7Days,
                             style    = MaterialTheme.typography.titleMedium,
                             color    = TextDark,
                             modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
@@ -215,14 +243,15 @@ fun StatsHeader(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment     = Alignment.CenterVertically
         ) {
-            Column {
+            val s = LocalStrings.current
+        Column {
                 Text(
-                    text  = "Statistike",
+                    text  = s.statsTitle,
                     style = MaterialTheme.typography.headlineMedium,
                     color = TextOnDark
                 )
                 Text(
-                    text  = "Pregled tvoje potrošnje",
+                    text  = s.statsSubtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = TextOnDark.copy(alpha = 0.65f)
                 )
@@ -239,7 +268,7 @@ fun StatsHeader(
                 ) {
                     Icon(
                         imageVector        = Icons.Default.DateRange,
-                        contentDescription = "Filtriraj po danu",
+                        contentDescription = s.filterByDay,
                         tint               = TextOnDark,
                         modifier           = Modifier.size(18.dp)
                     )
@@ -284,6 +313,7 @@ fun PeriodSelector(
     Row(
         modifier              = Modifier
             .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -291,7 +321,6 @@ fun PeriodSelector(
             val isSelected = selectedPeriod == period && !dimmed
             Box(
                 modifier = Modifier
-                    .weight(1f)
                     .clip(RoundedCornerShape(12.dp))
                     .background(
                         if (isSelected) MaterialTheme.colorScheme.primary
@@ -303,11 +332,11 @@ fun PeriodSelector(
                         shape = RoundedCornerShape(12.dp)
                     )
                     .clickable { onPeriodSelected(period) }
-                    .padding(vertical = 10.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text       = period.displayName,
+                    text       = period.localizedName(),
                     style      = MaterialTheme.typography.labelMedium,
                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                     color      = if (isSelected) TextOnDark
@@ -322,6 +351,7 @@ fun PeriodSelector(
 
 @Composable
 fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
+    val s = LocalStrings.current
     val utcCal = Calendar.getInstance(TimeZone.getTimeZone("UTC"))
     utcCal.timeInMillis = selectedDateMillis
     val label = "${utcCal.get(Calendar.DAY_OF_MONTH)}. " +
@@ -350,7 +380,7 @@ fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
                 modifier           = Modifier.size(16.dp)
             )
             Text(
-                text       = "Prikazano: $label",
+                text       = "${s.showingPrefix}$label",
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.SemiBold,
                 color      = MaterialTheme.colorScheme.primary
@@ -366,7 +396,7 @@ fun DateFilterChip(selectedDateMillis: Long, onClear: () -> Unit) {
         ) {
             Icon(
                 imageVector        = Icons.Default.Close,
-                contentDescription = "Ukloni filter dana",
+                contentDescription = s.removeFilter,
                 tint               = MaterialTheme.colorScheme.primary,
                 modifier           = Modifier.size(13.dp)
             )
@@ -385,7 +415,8 @@ fun CategoryFilter(
 ) {
     if (categories.isEmpty()) return
 
-    var showSheet by remember { mutableStateOf(false) }
+    val strings    = LocalStrings.current
+    var showSheet  by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     // Trigger button
@@ -418,8 +449,8 @@ fun CategoryFilter(
             )
             Text(
                 text       = if (selectedCategory != null)
-                                 "${getCategoryEmoji(selectedCategory)} $selectedCategory"
-                             else "Sve kategorije",
+                                 "${getCategoryEmoji(selectedCategory)} ${strings.categoryDisplayName(selectedCategory)}"
+                             else strings.allCategories,
                 style      = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selectedCategory != null) FontWeight.SemiBold else FontWeight.Normal,
                 color      = if (selectedCategory != null) MaterialTheme.colorScheme.primary else TextMuted
@@ -486,12 +517,12 @@ fun CategoryFilter(
                 ) {
                     Column {
                         Text(
-                            text  = "Filtriraj kategorije",
+                            text  = strings.filterCategoriesTitle,
                             style = MaterialTheme.typography.titleMedium,
                             color = TextDark
                         )
                         Text(
-                            text  = "${categories.size} kategorija dostupno",
+                            text  = "${categories.size} ${strings.categoriesAvailableSuffix}",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextMuted
                         )
@@ -547,7 +578,7 @@ fun CategoryFilter(
                             )
                         }
                         Text(
-                            text       = "Sve kategorije",
+                            text       = strings.allCategories,
                             style      = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (allSelected) FontWeight.SemiBold else FontWeight.Normal,
                             color      = if (allSelected) MaterialTheme.colorScheme.primary else TextDark
@@ -603,7 +634,7 @@ fun CategoryFilter(
                                     )
                                 }
                                 Text(
-                                    text       = category,
+                                    text       = strings.categoryDisplayName(category),
                                     style      = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                                     color      = if (isSelected) MaterialTheme.colorScheme.primary else TextDark
@@ -635,24 +666,25 @@ fun StatsSummaryRow(uiState: StatsUiState) {
             .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
+        val s = LocalStrings.current
         SummaryCard(
             modifier = Modifier.weight(1f),
             icon     = Icons.Default.AccountBalanceWallet,
-            label    = "Ukupno",
+            label    = s.totalLabel,
             value    = "€%.2f".format(uiState.totalThisMonth),
             color    = MaterialTheme.colorScheme.primary
         )
         SummaryCard(
             modifier = Modifier.weight(1f),
             icon     = Icons.Default.CalendarToday,
-            label    = "Dnevno",
+            label    = s.dailyLabel,
             value    = "€%.2f".format(uiState.averagePerDay),
             color    = MintGreen
         )
         SummaryCard(
             modifier = Modifier.weight(1f),
             icon     = Icons.Default.TrendingUp,
-            label    = "Prošli mj.",
+            label    = s.lastMonthLabel,
             value    = "€%.2f".format(uiState.totalLastMonth),
             color    = AccentGold
         )
@@ -731,7 +763,7 @@ fun CategoryStatsCard(categoryStats: List<CategoryStat>) {
             if (categoryStats.isEmpty()) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     Text(
-                        text  = "Nema podataka za ovaj period",
+                        text  = LocalStrings.current.noDataForPeriod,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )
@@ -769,7 +801,7 @@ fun CategoryStatRow(stat: CategoryStat) {
                     Text(text = getCategoryEmoji(stat.category), style = MaterialTheme.typography.bodyMedium)
                 }
                 Text(
-                    text  = stat.category,
+                    text  = LocalStrings.current.categoryDisplayName(stat.category),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextDark
                 )
@@ -807,6 +839,114 @@ fun CategoryStatRow(stat: CategoryStat) {
     }
 }
 
+// ── Pie Chart ─────────────────────────────────────────
+
+@Composable
+fun CategoryPieChartCard(categoryStats: List<CategoryStat>) {
+    if (categoryStats.isEmpty()) return
+
+    Card(
+        modifier  = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            AndroidView(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp),
+                factory = { context ->
+                    PieChart(context).apply {
+                        description.isEnabled      = false
+                        isDrawHoleEnabled          = true
+                        holeRadius                 = 52f
+                        transparentCircleRadius    = 0f
+                        setHoleColor(android.graphics.Color.TRANSPARENT)
+                        isRotationEnabled          = false
+                        setTouchEnabled(false)
+                        legend.isEnabled           = false
+                        setDrawEntryLabels(false)
+                        setCenterTextSize(13f)
+                        setCenterTextColor(android.graphics.Color.parseColor("#101828"))
+                        animateY(800)
+                    }
+                },
+                update = { chart ->
+                    val entries = categoryStats.map { stat ->
+                        PieEntry(stat.percentage, stat.category)
+                    }
+                    val androidColors = categoryStats.map { stat ->
+                        getCategoryColor(stat.category).let { c ->
+                            android.graphics.Color.argb(
+                                (c.alpha * 255).toInt(),
+                                (c.red * 255).toInt(),
+                                (c.green * 255).toInt(),
+                                (c.blue * 255).toInt()
+                            )
+                        }
+                    }
+                    val dataSet = PieDataSet(entries, "").apply {
+                        colors          = androidColors
+                        sliceSpace      = 2.5f
+                        selectionShift  = 0f
+                        setDrawValues(false)
+                    }
+                    val topStat = categoryStats.firstOrNull()
+                    chart.centerText = if (topStat != null)
+                        "${getCategoryEmoji(topStat.category)}\n${"%.0f".format(topStat.percentage)}%"
+                    else ""
+                    chart.data = PieData(dataSet)
+                    chart.invalidate()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            val s = LocalStrings.current
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                categoryStats.take(5).forEach { stat ->
+                    val color = getCategoryColor(stat.category)
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment     = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment     = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
+                            Text(
+                                text  = "${getCategoryEmoji(stat.category)} ${s.categoryDisplayName(stat.category)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextDark
+                            )
+                        }
+                        Text(
+                            text       = "%.1f%%".format(stat.percentage),
+                            style      = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = color
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── Dnevni Graf ───────────────────────────────────────
 
 @Composable
@@ -830,7 +970,7 @@ fun DailyStatsCard(dailyStats: List<DailyStat>) {
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text  = "Nema podataka za ovaj period",
+                        text  = LocalStrings.current.noDataForPeriod,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextMuted
                     )
@@ -898,3 +1038,4 @@ fun DailyStatsCard(dailyStats: List<DailyStat>) {
         }
     }
 }
+

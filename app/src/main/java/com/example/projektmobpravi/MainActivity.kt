@@ -20,7 +20,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.example.projektmobpravi.ui.navigation.NavGraph
 import com.example.projektmobpravi.ui.navigation.Screen
+import com.example.projektmobpravi.ui.theme.AppLanguageState
 import com.example.projektmobpravi.ui.theme.AppThemeState
+import com.example.projektmobpravi.ui.theme.CroatianStrings
+import com.example.projektmobpravi.ui.theme.EnglishStrings
+import com.example.projektmobpravi.ui.theme.LocalLanguage
+import com.example.projektmobpravi.ui.theme.LocalStrings
 import com.example.projektmobpravi.ui.theme.LocalTheme
 import com.example.projektmobpravi.ui.theme.PROJEKTMOBPRAVITheme
 import com.google.firebase.auth.FirebaseAuth
@@ -29,6 +34,7 @@ import dagger.hilt.android.AndroidEntryPoint
 private const val PREFS_NAME     = "app_prefs"
 private const val KEY_DARK       = "dark_theme"
 private const val KEY_REMEMBER   = "remember_me"
+private const val KEY_ENGLISH    = "language_english"
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -45,7 +51,8 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            var isDark by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK, false)) }
+            var isDark    by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_DARK,    false)) }
+            var isEnglish by rememberSaveable { mutableStateOf(prefs.getBoolean(KEY_ENGLISH, false)) }
 
             val startDestination = remember {
                 val rememberMe = prefs.getBoolean(KEY_REMEMBER, false)
@@ -65,7 +72,15 @@ class MainActivity : ComponentActivity() {
                         isDark = !isDark
                         prefs.edit().putBoolean(KEY_DARK, isDark).apply()
                     }
-                )
+                ),
+                LocalLanguage provides AppLanguageState(
+                    isEnglish = isEnglish,
+                    toggle    = {
+                        isEnglish = !isEnglish
+                        prefs.edit().putBoolean(KEY_ENGLISH, isEnglish).apply()
+                    }
+                ),
+                LocalStrings provides if (isEnglish) EnglishStrings else CroatianStrings
             ) {
                 PROJEKTMOBPRAVITheme(darkTheme = isDark) {
                     Surface(

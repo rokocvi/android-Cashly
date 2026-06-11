@@ -33,12 +33,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
+import com.example.projektmobpravi.ui.theme.LocalStrings
 
 @Composable
 fun LoginScreen(navController: NavHostController) {
     val viewModel: LoginViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val strings = LocalStrings.current
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -107,7 +109,7 @@ fun LoginScreen(navController: NavHostController) {
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text  = "Prati svoju potrošnju pametno",
+                        text  = strings.loginSubtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextOnDark.copy(alpha = 0.65f)
                     )
@@ -129,12 +131,12 @@ fun LoginScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text  = "Dobrodošli nazad",
+                        text  = strings.loginWelcome,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextDark
                     )
                     Text(
-                        text  = "Prijavite se na svoj račun",
+                        text  = strings.loginWelcomeSub,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
@@ -162,7 +164,7 @@ fun LoginScreen(navController: NavHostController) {
                     OutlinedTextField(
                         value         = password,
                         onValueChange = { password = it; viewModel.clearError() },
-                        label         = { Text("Lozinka") },
+                        label         = { Text(strings.passwordLabel) },
                         leadingIcon   = {
                             Icon(Icons.Default.Lock, null, tint = MintGreen)
                         },
@@ -210,7 +212,7 @@ fun LoginScreen(navController: NavHostController) {
                             )
                         )
                         Text(
-                            text  = "Zapamti me",
+                            text  = strings.rememberMe,
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextDark
                         )
@@ -231,7 +233,7 @@ fun LoginScreen(navController: NavHostController) {
                             )
                         } else {
                             Text(
-                                text  = "Prijava",
+                                text  = strings.loginButton,
                                 style = MaterialTheme.typography.titleMedium,
                                 color = TextOnDark
                             )
@@ -244,7 +246,7 @@ fun LoginScreen(navController: NavHostController) {
                     ) {
                         HorizontalDivider(modifier = Modifier.weight(1f), color = TextMuted.copy(alpha = 0.25f))
                         Text(
-                            text  = "  ili  ",
+                            text  = "  ${strings.or_}  ",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextMuted
                         )
@@ -259,7 +261,7 @@ fun LoginScreen(navController: NavHostController) {
                         border   = ButtonDefaults.outlinedButtonBorder.copy(width = 1.5.dp)
                     ) {
                         Text(
-                            text  = "Nemaš račun? Registriraj se",
+                            text  = strings.noAccount,
                             style = MaterialTheme.typography.labelLarge
                         )
                     }

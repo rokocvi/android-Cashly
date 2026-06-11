@@ -47,7 +47,9 @@ data class StatsUiState(
 enum class Period(val displayName: String) {
     THIS_WEEK("Ovaj tjedan"),
     THIS_MONTH("Ovaj mjesec"),
-    LAST_MONTH("Prošli mjesec")
+    LAST_MONTH("Prošli mjesec"),
+    THIS_QUARTER("Ovaj kvartal"),
+    THIS_YEAR("Ova godina")
 }
 
 @HiltViewModel
@@ -185,12 +187,9 @@ class StatsViewModel @Inject constructor(
     private fun getEndDate(period: Period): Long {
         val calendar = Calendar.getInstance()
         return when (period) {
-            Period.THIS_WEEK, Period.THIS_MONTH -> {
-                // Do danas
-                System.currentTimeMillis()
-            }
+            Period.THIS_WEEK, Period.THIS_MONTH,
+            Period.THIS_QUARTER, Period.THIS_YEAR -> System.currentTimeMillis()
             Period.LAST_MONTH -> {
-                // Do početka ovog mjeseca
                 calendar.set(Calendar.DAY_OF_MONTH, 1)
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
@@ -209,6 +208,7 @@ class StatsViewModel @Inject constructor(
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
                 calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
                 calendar.timeInMillis
             }
             Period.THIS_MONTH -> {
@@ -216,6 +216,7 @@ class StatsViewModel @Inject constructor(
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
                 calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
                 calendar.timeInMillis
             }
             Period.LAST_MONTH -> {
@@ -224,6 +225,25 @@ class StatsViewModel @Inject constructor(
                 calendar.set(Calendar.HOUR_OF_DAY, 0)
                 calendar.set(Calendar.MINUTE, 0)
                 calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.timeInMillis
+            }
+            Period.THIS_QUARTER -> {
+                val quarterStartMonth = (calendar.get(Calendar.MONTH) / 3) * 3
+                calendar.set(Calendar.MONTH, quarterStartMonth)
+                calendar.set(Calendar.DAY_OF_MONTH, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
+                calendar.timeInMillis
+            }
+            Period.THIS_YEAR -> {
+                calendar.set(Calendar.DAY_OF_YEAR, 1)
+                calendar.set(Calendar.HOUR_OF_DAY, 0)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                calendar.set(Calendar.MILLISECOND, 0)
                 calendar.timeInMillis
             }
         }
@@ -249,6 +269,20 @@ class StatsViewModel @Inject constructor(
                 cal.add(Calendar.MONTH, -1)
                 cal.getActualMaximum(Calendar.DAY_OF_MONTH)
             }
+            Period.THIS_QUARTER -> {
+                val cal = Calendar.getInstance()
+                val quarterStartMonth = (cal.get(Calendar.MONTH) / 3) * 3
+                val start = Calendar.getInstance().apply {
+                    set(Calendar.MONTH, quarterStartMonth)
+                    set(Calendar.DAY_OF_MONTH, 1)
+                    set(Calendar.HOUR_OF_DAY, 0)
+                    set(Calendar.MINUTE, 0)
+                    set(Calendar.SECOND, 0)
+                    set(Calendar.MILLISECOND, 0)
+                }
+                ((cal.timeInMillis - start.timeInMillis) / (24 * 60 * 60 * 1000L)).toInt() + 1
+            }
+            Period.THIS_YEAR -> Calendar.getInstance().get(Calendar.DAY_OF_YEAR)
         }
     }
 }

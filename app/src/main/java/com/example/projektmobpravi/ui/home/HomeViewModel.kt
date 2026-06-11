@@ -24,9 +24,12 @@ data class HomeUiState(
     val isLoggedOut: Boolean = false,
     val isOffline: Boolean = false,
     val transactions: List<TransactionEntity> = emptyList(),
+    val totalCount: Int = 0,
+    val displayCount: Int = HomeViewModel.PAGE_SIZE,
     val totalThisMonth: Double = 0.0,
     val categoryTotals: Map<String, Double> = emptyMap(),
     val username: String = "",
+    val searchQuery: String = "",
     val errorMessage: String? = null
 )
 
@@ -40,6 +43,10 @@ class HomeViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState: StateFlow<HomeUiState> = _uiState
+
+    private var allTransactions: List<TransactionEntity> = emptyList()
+
+    companion object { const val PAGE_SIZE = 10 }
 
     private var authStateListener: FirebaseAuth.AuthStateListener? = null
 
@@ -99,20 +106,52 @@ class HomeViewModel @Inject constructor(
                 val thisMonthTransactions = transactions.filter { it.date >= startOfMonth }
                 val totalThisMonth = thisMonthTransactions.sumOf { it.amount }
 
-                // Suma po kategorijama za ovaj mjesec
                 val categoryTotals = thisMonthTransactions
                     .groupBy { it.category }
                     .mapValues { (_, list) -> list.sumOf { it.amount } }
 
+                allTransactions = transactions
                 _uiState.value = _uiState.value.copy(
-                    isLoading = false,
-                    transactions = transactions.take(10), // zadnjih 10
+                    isLoading      = false,
+                    totalCount     = transactions.size,
+                    transactions   = applyFilter(transactions, _uiState.value.searchQuery, _uiState.value.displayCount),
                     totalThisMonth = totalThisMonth,
                     categoryTotals = categoryTotals
                 )
             }
         }
     }
+
+    fun setSearchQuery(query: String) {
+        _uiState.value = _uiState.value.copy(
+            searchQuery  = query,
+            transactions = applyFilter(allTransactions, query)
+        )
+    }
+
+    private fun applyFilter(transactions: List<TransactionEntity>, query: String): List<TransactionEntity> {
+        val trimmed = query.trim().lowercase()
+        return if (trimmed.isEmpty()) {
+            transactions.take(10)
+        } else {
+            transactions.filter { t ->
+                t.note.lowercase().contains(trimmed) ||
+                t.category.lowercase().contains(trimmed) ||
+                (categoryEnglish[t.category]?.contains(trimmed) == true)
+            }
+        }
+    }
+
+    private val categoryEnglish = mapOf(
+        "Hrana"      to "food",
+        "Trgovina"   to "shopping",
+        "Prijevoz"   to "transport",
+        "Zabava"     to "entertainment",
+        "Kuća"       to "housing",
+        "Zdravlje"   to "health",
+        "Odijevanje" to "clothing",
+        "Ljepota"    to "beauty"
+    )
 
     fun deleteTransaction(transaction: TransactionEntity) {
         viewModelScope.launch {

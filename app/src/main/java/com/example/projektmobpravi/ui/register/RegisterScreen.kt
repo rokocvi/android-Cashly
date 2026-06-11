@@ -36,12 +36,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import com.example.projektmobpravi.ui.navigation.Screen
 import com.example.projektmobpravi.ui.theme.*
+import com.example.projektmobpravi.ui.theme.LocalStrings
 
 @Composable
 fun RegisterScreen(navController: NavHostController) {
     val viewModel: RegisterViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
+    val strings = LocalStrings.current
     var username by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -96,13 +98,13 @@ fun RegisterScreen(navController: NavHostController) {
                     CashlyLogo()
                     Spacer(modifier = Modifier.height(20.dp))
                     Text(
-                        text  = "Kreiraj račun",
+                        text  = strings.registerHeadline,
                         style = MaterialTheme.typography.headlineMedium,
                         color = TextOnDark
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text  = "Počni pratiti svoju potrošnju",
+                        text  = strings.registerSubtitle,
                         style = MaterialTheme.typography.bodyMedium,
                         color = TextOnDark.copy(alpha = 0.65f)
                     )
@@ -124,12 +126,12 @@ fun RegisterScreen(navController: NavHostController) {
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     Text(
-                        text  = "Novi račun",
+                        text  = strings.registerCardTitle,
                         style = MaterialTheme.typography.titleLarge,
                         color = TextDark
                     )
                     Text(
-                        text  = "Ispunite sve podatke za registraciju",
+                        text  = strings.registerCardSubtitle,
                         style = MaterialTheme.typography.bodySmall,
                         color = TextMuted
                     )
@@ -139,7 +141,7 @@ fun RegisterScreen(navController: NavHostController) {
                     OutlinedTextField(
                         value         = username,
                         onValueChange = { username = it; viewModel.clearError() },
-                        label         = { Text("Korisničko ime") },
+                        label         = { Text(strings.usernameLabel) },
                         leadingIcon   = { Icon(Icons.Default.Person, null, tint = MintGreen) },
                         modifier      = Modifier.fillMaxWidth(),
                         shape         = RoundedCornerShape(12.dp),
@@ -170,7 +172,7 @@ fun RegisterScreen(navController: NavHostController) {
                     OutlinedTextField(
                         value         = password,
                         onValueChange = { password = it; viewModel.clearError() },
-                        label         = { Text("Lozinka") },
+                        label         = { Text(strings.passwordLabel) },
                         leadingIcon   = { Icon(Icons.Default.Lock, null, tint = MintGreen) },
                         trailingIcon  = {
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
@@ -198,7 +200,7 @@ fun RegisterScreen(navController: NavHostController) {
                     OutlinedTextField(
                         value         = confirmPassword,
                         onValueChange = { confirmPassword = it; viewModel.clearError() },
-                        label         = { Text("Potvrdi lozinku") },
+                        label         = { Text(strings.confirmPasswordLabel) },
                         leadingIcon   = { Icon(Icons.Default.Lock, null, tint = MintGreen) },
                         trailingIcon  = {
                             IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
@@ -248,7 +250,7 @@ fun RegisterScreen(navController: NavHostController) {
                             )
                         } else {
                             Text(
-                                text  = "Registracija",
+                                text  = strings.registerButton,
                                 style = MaterialTheme.typography.titleMedium,
                                 color = TextOnDark
                             )
@@ -260,7 +262,7 @@ fun RegisterScreen(navController: NavHostController) {
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
-                            text  = "Već imaš račun? Prijavi se",
+                            text  = strings.hasAccount,
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.primary
                         )

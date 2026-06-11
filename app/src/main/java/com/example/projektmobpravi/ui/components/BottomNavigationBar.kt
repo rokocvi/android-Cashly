@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.projektmobpravi.ui.navigation.Screen
+import com.example.projektmobpravi.ui.theme.LocalStrings
 import com.example.projektmobpravi.ui.theme.SurfaceCard
 import com.example.projektmobpravi.ui.theme.TextMuted
 
@@ -38,39 +39,40 @@ data class BottomNavItem(
     val label: String
 )
 
-val bottomNavItems = listOf(
-    BottomNavItem(
-        matchRoute     = Screen.Home.route,
-        navigateRoute  = Screen.Home.route,
-        selectedIcon   = Icons.Filled.Home,
-        unselectedIcon = Icons.Outlined.Home,
-        label          = "Početna"
-    ),
-    BottomNavItem(
-        matchRoute     = Screen.Stats.route,
-        navigateRoute  = Screen.Stats.route,
-        selectedIcon   = Icons.Filled.BarChart,
-        unselectedIcon = Icons.Outlined.BarChart,
-        label          = "Statistike"
-    ),
-    BottomNavItem(
-        matchRoute     = Screen.AddTransaction.route,
-        navigateRoute  = Screen.AddTransaction.addRoute,
-        selectedIcon   = Icons.Filled.AddCircle,
-        unselectedIcon = Icons.Outlined.AddCircleOutline,
-        label          = "Dodaj"
-    ),
-    BottomNavItem(
-        matchRoute     = Screen.Budget.route,
-        navigateRoute  = Screen.Budget.route,
-        selectedIcon   = Icons.Filled.Wallet,
-        unselectedIcon = Icons.Outlined.Wallet,
-        label          = "Budgeti"
-    )
-)
-
 @Composable
 fun BottomNavigationBar(navController: NavHostController) {
+    val s = LocalStrings.current
+    val navItems = listOf(
+        BottomNavItem(
+            matchRoute     = Screen.Home.route,
+            navigateRoute  = Screen.Home.route,
+            selectedIcon   = Icons.Filled.Home,
+            unselectedIcon = Icons.Outlined.Home,
+            label          = s.navHome
+        ),
+        BottomNavItem(
+            matchRoute     = Screen.Stats.route,
+            navigateRoute  = Screen.Stats.route,
+            selectedIcon   = Icons.Filled.BarChart,
+            unselectedIcon = Icons.Outlined.BarChart,
+            label          = s.navStats
+        ),
+        BottomNavItem(
+            matchRoute     = Screen.AddTransaction.route,
+            navigateRoute  = Screen.AddTransaction.addRoute,
+            selectedIcon   = Icons.Filled.AddCircle,
+            unselectedIcon = Icons.Outlined.AddCircleOutline,
+            label          = s.navAdd
+        ),
+        BottomNavItem(
+            matchRoute     = Screen.Budget.route,
+            navigateRoute  = Screen.Budget.route,
+            selectedIcon   = Icons.Filled.Wallet,
+            unselectedIcon = Icons.Outlined.Wallet,
+            label          = s.navBudget
+        )
+    )
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
@@ -83,7 +85,7 @@ fun BottomNavigationBar(navController: NavHostController) {
             ambientColor = Color.Black.copy(alpha = 0.04f)
         )
     ) {
-        bottomNavItems.forEach { item ->
+        navItems.forEach { item ->
             val selected = currentRoute == item.matchRoute
             NavigationBarItem(
                 selected = selected,
